@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
       });
+      console.log('Dashboard API - Total projects from DB:', allProjects.length);
+      console.log('Dashboard API - Project statuses:', allProjects.map(p => ({ name: p.name, status: p.status })));
     } catch (e) {
       console.error('Error fetching projects:', e);
       allProjects = [];
@@ -27,6 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Filter out COMPLETED projects for dashboard charts - only show active projects
     const activeProjects = allProjects.filter(p => p.status !== 'Completed');
+    console.log('Dashboard API - Active projects (non-Completed):', activeProjects.length);
 
     // Calculate stats from ACTIVE projects only
     let totalBudget = 0;
@@ -234,6 +237,9 @@ export async function GET(request: NextRequest) {
         });
       }
     }
+
+    console.log('Dashboard API - Returning projectStats:', projectStats.length, 'projects');
+    console.log('Dashboard API - projectStats data:', JSON.stringify(projectStats.map(p => ({ id: p.id, name: p.name, status: p.status, profit: p.profit }))));
 
     return NextResponse.json({
       stats: {

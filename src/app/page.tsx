@@ -3030,14 +3030,6 @@ export default function NEONERP() {
                                   <p className="text-xs text-slate-500">{project.code}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className={`text-xs px-2 py-0.5 rounded ${
-                                    project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
-                                    project.status === 'Deal' ? 'bg-green-500/20 text-green-400' :
-                                    project.status === 'Completed' ? 'bg-purple-500/20 text-purple-400' :
-                                    'bg-slate-500/20 text-slate-400'
-                                  }`}>
-                                    {project.status}
-                                  </span>
                                   {isOverdue && <AlertTriangle className="w-4 h-4 text-red-400" />}
                                   {isAhead && !isOverdue && <TrendingUp className="w-4 h-4 text-green-400" />}
                                   {isBehind && !isOverdue && <Clock className="w-4 h-4 text-amber-400" />}

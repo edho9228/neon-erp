@@ -348,7 +348,7 @@
   animation: marquee-fast 15s linear infinite;
 }
 
-/* Ticker Scroll - Smooth right to left with seamless loop */
+/* Ticker Scroll - Smooth right to left with seamless loop at 50px/s */
 @keyframes ticker-scroll {
   0% {
     transform: translateX(0);
@@ -358,11 +358,11 @@
   }
 }
 
-.animate-ticker {
-  animation: ticker-scroll 60s linear infinite;
+.ticker-animate {
+  animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
 }
 
-.animate-ticker:hover {
+.ticker-animate:hover {
   animation-play-state: paused;
 }
 

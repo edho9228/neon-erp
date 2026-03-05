@@ -2359,14 +2359,15 @@ export default function NEONERP() {
             <span className="text-xs font-bold text-green-400">LIVE REPORT PROJECT</span>
           </div>
 
-          {/* Ticker Content - Project P/L and Bobot */}
-          <div className="flex-1 overflow-hidden ml-2">
+          {/* Ticker Content - Project P/L and Bobot (Deal/InProgress only) */}
+          <div className="flex-1 overflow-hidden ml-2" id="ticker-container">
             {(() => {
-              const allProjects = projectStats.filter((p: any) => p.status !== 'Completed');
-              const totalBudget = allProjects.reduce((sum: number, p: any) => sum + (p.budget || p.contractValue || 0), 0);
+              // Filter hanya project dengan status Deal atau InProgress
+              const activeProjects = projectStats.filter((p: any) => p.status === 'Deal' || p.status === 'InProgress');
+              const totalBudget = activeProjects.reduce((sum: number, p: any) => sum + (p.budget || p.contractValue || 0), 0);
 
               // Build ticker content
-              const tickerItems = allProjects.map((project: any) => {
+              const tickerItems = activeProjects.map((project: any) => {
                 const isProfit = project.profit >= 0;
                 const profitPercent = project.budget > 0
                   ? ((project.profit / project.budget) * 100)
@@ -2378,26 +2379,30 @@ export default function NEONERP() {
                   : 0;
 
                 return (
-                  <span key={project.id} className="inline-flex items-center gap-2 mx-6 text-xs">
+                  <span key={project.id} className="inline-flex items-center gap-2 mx-6 text-xs whitespace-nowrap">
                     <span className="font-medium text-slate-200">{project.name}</span>
                     <span className={`font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                       {isProfit ? '▲P' : '▼L'} {Math.abs(profitPercent).toFixed(1)}%
                     </span>
                     <span className="text-slate-500">|</span>
-                    <span className="text-slate-400">BOBOT</span>
+                    <span className="text-slate-400">BOBOT PROJECT</span>
                     <span className="font-medium text-cyan-400 font-mono">{bobotPercent.toFixed(1)}%</span>
                   </span>
                 );
               });
 
-              // Calculate animation duration based on content length (longer for readability)
-              const duration = Math.max(60, allProjects.length * 8);
+              // Calculate duration based on 50px per second speed
+              // Measure content width and calculate time needed
+              const containerWidth = typeof window !== 'undefined' ? (document.getElementById('ticker-container')?.offsetWidth || 800) : 800;
+              const estimatedContentWidth = activeProjects.length * 350; // ~350px per project item
+              const totalWidth = estimatedContentWidth + containerWidth;
+              const duration = totalWidth / 50; // 50px per second
 
               return (
                 <div
-                  className="whitespace-nowrap flex items-center"
+                  className="whitespace-nowrap flex items-center ticker-animate"
                   style={{
-                    animation: `ticker-scroll ${duration}s linear infinite`
+                    animationDuration: `${duration}s`
                   }}
                 >
                   {/* First set of items */}

@@ -2361,14 +2361,6 @@ export default function NEONERP() {
                       <span className={`${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                         {isProfit ? '▲' : '▼'} {Math.abs(profitPercent).toFixed(1)}%
                       </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                        project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
-                        project.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
-                        project.status === 'Deal' ? 'bg-purple-500/20 text-purple-400' :
-                        'bg-slate-500/20 text-slate-400'
-                      }`}>
-                        {project.status}
-                      </span>
                       <span className="text-slate-600">|</span>
                     </span>
                   );
@@ -2839,21 +2831,11 @@ export default function NEONERP() {
                                   return (
                                     <div key={project.id} className="group hover:bg-slate-800/30 rounded-lg p-2 transition-all">
                                       <div className="flex items-center gap-3">
-                                        {/* Project Name & Status */}
+                                        {/* Project Name */}
                                         <div className="w-40 shrink-0">
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium text-slate-200 truncate" title={project.name}>
-                                              {project.name}
-                                            </span>
-                                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
-                                              project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
-                                              project.status === 'Deal' ? 'bg-purple-500/20 text-purple-400' :
-                                              project.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
-                                              'bg-slate-500/20 text-slate-400'
-                                            }`}>
-                                              {project.status}
-                                            </span>
-                                          </div>
+                                          <span className="text-sm font-medium text-slate-200 truncate block" title={project.name}>
+                                            {project.name}
+                                          </span>
                                           <p className="text-[10px] text-slate-500 truncate">{project.code}</p>
                                         </div>
                                         
@@ -2915,19 +2897,9 @@ export default function NEONERP() {
                                   >
                                     <div className="p-3">
                                       {/* Header */}
-                                      <div className="flex items-start justify-between mb-2">
-                                        <span className="text-xs font-bold text-white truncate max-w-[120px]" title={project.name}>
-                                          {project.name}
-                                        </span>
-                                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                                          project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
-                                          project.status === 'Deal' ? 'bg-purple-500/20 text-purple-400' :
-                                          project.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
-                                          'bg-slate-500/20 text-slate-400'
-                                        }`}>
-                                          {project.status}
-                                        </span>
-                                      </div>
+                                      <span className="text-xs font-bold text-white truncate block mb-2" title={project.name}>
+                                        {project.name}
+                                      </span>
                                       
                                       {/* Value */}
                                       <p className={`text-lg font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
@@ -3469,93 +3441,6 @@ export default function NEONERP() {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Tasks by Status & Time Sheet Summary */}
-                <div className="space-y-6">
-                  {/* Tasks by Status */}
-                  <Card className="glass-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-white text-lg">Tasks by Status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-32 flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { name: 'Finished', value: 25, color: '#22c55e' },
-                                { name: 'Planned', value: 15, color: '#64748b' },
-                                { name: 'On Track', value: 3, color: '#3b82f6' },
-                                { name: 'Delayed', value: 2, color: '#f59e0b' },
-                                { name: 'At Risk', value: 1, color: '#ec4899' },
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={30}
-                              outerRadius={50}
-                              paddingAngle={2}
-                              dataKey="value"
-                            >
-                              <Cell fill="#22c55e" />
-                              <Cell fill="#64748b" />
-                              <Cell fill="#3b82f6" />
-                              <Cell fill="#f59e0b" />
-                              <Cell fill="#ec4899" />
-                            </Pie>
-                            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      {/* Legend */}
-                      <div className="grid grid-cols-2 gap-1 mt-2 text-xs">
-                        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span><span className="text-slate-400">Finished</span><span className="text-white ml-auto">25</span></div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-500"></span><span className="text-slate-400">Planned</span><span className="text-white ml-auto">15</span></div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500"></span><span className="text-slate-400">On Track</span><span className="text-white ml-auto">3</span></div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span><span className="text-slate-400">Delayed</span><span className="text-white ml-auto">2</span></div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500"></span><span className="text-slate-400">At Risk</span><span className="text-white ml-auto">1</span></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Time Sheet Summary */}
-                  <Card className="glass-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-white text-lg">Time Sheet Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-28 flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { name: 'Billable', value: 125, color: '#22c55e' },
-                                { name: 'Non-Billable', value: 17, color: '#f59e0b' },
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={30}
-                              outerRadius={45}
-                              paddingAngle={2}
-                              dataKey="value"
-                            >
-                              <Cell fill="#22c55e" />
-                              <Cell fill="#f59e0b" />
-                            </Pie>
-                            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute text-center">
-                          <p className="text-lg font-bold text-white">142h</p>
-                          <p className="text-xs text-slate-400">Total</p>
-                        </div>
-                      </div>
-                      <div className="flex justify-center gap-6 mt-2 text-xs">
-                        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span><span className="text-slate-400">Billable</span><span className="text-white ml-1">125h</span></div>
-                        <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span><span className="text-slate-400">Non-Bill</span><span className="text-white ml-1">17h</span></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
               </div>
 
               {/* Main Tasks Next Up Table */}

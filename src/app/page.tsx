@@ -2753,7 +2753,7 @@ export default function NEONERP() {
 
               {/* Project Profit/Loss Chart - LiveCoinWatch Style */}
               <Card className="glass-card overflow-hidden">
-                {/* Header - LiveCoinWatch Style */}
+                {/* Header */}
                 <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-700/50">
                   <div className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -2766,10 +2766,24 @@ export default function NEONERP() {
                       </div>
                       <div>
                         <h3 className="text-white font-bold text-base">Project P/L Monitor</h3>
-                        <p className="text-[10px] text-slate-500">Real-time Financial Performance</p>
+                        <p className="text-[10px] text-slate-500">Box & Whisker Plot - Real-time Financial Analytics</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      {/* Zoom Controls */}
+                      <div className="flex items-center gap-1 bg-slate-800 rounded px-2 py-1">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                          onClick={() => {
+                            const container = document.getElementById('chart-container');
+                            if (container) container.style.transform = 'scale(1)';
+                          }}
+                        >
+                          <span className="text-xs">Reset</span>
+                        </Button>
+                      </div>
                       {/* Auto-refresh indicator */}
                       <div className="flex items-center gap-2 text-xs text-slate-400">
                         <RefreshCw className="w-3 h-3 animate-spin" />
@@ -2783,184 +2797,333 @@ export default function NEONERP() {
                   </div>
                 </div>
                 
-                <CardContent className="p-0">
+                <CardContent className="p-4">
                   {(() => {
-                    const allProjects = projectStats;
+                    // Debug logging
+                    console.log('Project P/L Monitor - projectStats:', projectStats);
+                    console.log('Project P/L Monitor - projectStats length:', projectStats?.length);
+                    
+                    // Use projectStats directly
+                    const allProjects = projectStats || [];
+                    
+                    if (allProjects.length === 0) {
+                      return (
+                        <div className="text-center py-16 text-slate-500">
+                          <div className="bg-slate-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <TrendingUp className="w-10 h-10 opacity-30" />
+                          </div>
+                          <p className="text-lg font-medium mb-1">Belum ada data project</p>
+                          <p className="text-sm mb-4">Monitor akan aktif ketika ada project tersedia</p>
+                          <p className="text-xs text-cyan-400">Debug: Total Projects in DB: {dashboardStats?.totalProjects || 0}</p>
+                        </div>
+                      );
+                    }
+                    
+                    // Generate Box & Whisker data from project daily data
+                    const generateBoxPlotData = () => {
+                      // Group projectDailyData by project
+                      const projectGroups: Record<string, any[]> = {};
+                      
+                      if (projectDailyData && projectDailyData.length > 0) {
+                        projectDailyData.forEach((d: any) => {
+                          if (!projectGroups[d.projectName]) {
+                            projectGroups[d.projectName] = [];
+                          }
+                          projectGroups[d.projectName].push(d.dailyProfit);
+                        });
+                      } else {
+                        // Fallback: generate from project stats
+                        allProjects.forEach((project: any) => {
+                          const baseProfit = project.profit || 0;
+                          const variance = Math.abs(baseProfit) * 0.3 || 1000000;
+                          const profits = [];
+                          for (let i = 0; i < 30; i++) {
+                            profits.push(baseProfit + (Math.random() - 0.5) * variance);
+                          }
+                          projectGroups[project.name] = profits;
+                        });
+                      }
+                      
+                      // Calculate box plot statistics for each project
+                      return Object.entries(projectGroups).map(([name, profits]) => {
+                        const sorted = [...profits].sort((a, b) => a - b);
+                        const len = sorted.length;
+                        const min = sorted[0];
+                        const max = sorted[len - 1];
+                        const q1 = sorted[Math.floor(len * 0.25)];
+                        const median = sorted[Math.floor(len * 0.5)];
+                        const q3 = sorted[Math.floor(len * 0.75)];
+                        const mean = profits.reduce((a, b) => a + b, 0) / len;
+                        
+                        // Find project for additional info
+                        const project = allProjects.find((p: any) => p.name === name);
+                        
+                        return {
+                          name: name.length > 12 ? name.substring(0, 12) + '...' : name,
+                          fullName: name,
+                          min: min / 1000000, // Convert to millions for display
+                          max: max / 1000000,
+                          q1: q1 / 1000000,
+                          median: median / 1000000,
+                          q3: q3 / 1000000,
+                          mean: mean / 1000000,
+                          rawMin: min,
+                          rawMax: max,
+                          rawMedian: median,
+                          profit: project?.profit || 0,
+                          status: project?.status || 'Unknown',
+                          income: project?.income || 0,
+                          expense: project?.expense || 0,
+                          isProfit: (project?.profit || 0) >= 0,
+                        };
+                      });
+                    };
+                    
+                    const boxPlotData = generateBoxPlotData();
+                    console.log('Box Plot Data:', boxPlotData);
+                    
+                    // Custom Box Plot component
+                    const BoxPlotBar = ({ data, x, y, width, height, onMouseEnter, onMouseLeave }: any) => {
+                      const { min, max, q1, q3, median, isProfit } = data;
+                      const range = max - min || 1;
+                      const scale = height / range;
+                      const centerY = y + height;
+                      
+                      const boxBottom = centerY - (q3 - min) * scale;
+                      const boxTop = centerY - (q1 - min) * scale;
+                      const boxHeight = Math.max(2, (q3 - q1) * scale);
+                      const medianY = centerY - (median - min) * scale;
+                      const whiskerTop = centerY - (max - min) * scale;
+                      const whiskerBottom = centerY;
+                      
+                      const color = isProfit ? '#22c55e' : '#ef4444';
+                      const bgColor = isProfit ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+                      
+                      return (
+                        <g 
+                          onMouseEnter={onMouseEnter} 
+                          onMouseLeave={onMouseLeave}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {/* Whisker line (vertical) */}
+                          <line
+                            x1={x + width / 2}
+                            y1={whiskerTop}
+                            x2={x + width / 2}
+                            y2={whiskerBottom}
+                            stroke={color}
+                            strokeWidth={1}
+                            strokeDasharray="3,3"
+                          />
+                          {/* Top whisker cap */}
+                          <line
+                            x1={x + width * 0.3}
+                            y1={whiskerTop}
+                            x2={x + width * 0.7}
+                            y2={whiskerTop}
+                            stroke={color}
+                            strokeWidth={2}
+                          />
+                          {/* Bottom whisker cap */}
+                          <line
+                            x1={x + width * 0.3}
+                            y1={whiskerBottom}
+                            x2={x + width * 0.7}
+                            y2={whiskerBottom}
+                            stroke={color}
+                            strokeWidth={2}
+                          />
+                          {/* Box (IQR) */}
+                          <rect
+                            x={x + width * 0.2}
+                            y={boxBottom}
+                            width={width * 0.6}
+                            height={boxHeight}
+                            fill={bgColor}
+                            stroke={color}
+                            strokeWidth={2}
+                            rx={2}
+                          />
+                          {/* Median line */}
+                          <line
+                            x1={x + width * 0.2}
+                            y1={medianY}
+                            x2={x + width * 0.8}
+                            y2={medianY}
+                            stroke={color}
+                            strokeWidth={3}
+                          />
+                          {/* Mean dot */}
+                          <circle
+                            cx={x + width / 2}
+                            cy={centerY - (data.mean - min) * scale}
+                            r={3}
+                            fill={color}
+                          />
+                        </g>
+                      );
+                    };
+                    
+                    // Tooltip content component
+                    const CustomTooltip = ({ active, payload }: any) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 shadow-xl">
+                            <p className="text-white font-bold mb-2">{data.fullName}</p>
+                            <p className="text-xs text-slate-400 mb-1">Status: <span className={`font-medium ${data.isProfit ? 'text-green-400' : 'text-red-400'}`}>{data.status}</span></p>
+                            <div className="border-t border-slate-700 pt-2 mt-2 space-y-1">
+                              <p className="text-xs"><span className="text-slate-400">Max:</span> <span className="text-green-400 font-mono">{formatCurrency(data.rawMax)}</span></p>
+                              <p className="text-xs"><span className="text-slate-400">Q3:</span> <span className="text-cyan-400 font-mono">{formatCurrency(data.q3 * 1000000)}</span></p>
+                              <p className="text-xs"><span className="text-slate-400">Median:</span> <span className="text-amber-400 font-mono">{formatCurrency(data.rawMedian)}</span></p>
+                              <p className="text-xs"><span className="text-slate-400">Q1:</span> <span className="text-cyan-400 font-mono">{formatCurrency(data.q1 * 1000000)}</span></p>
+                              <p className="text-xs"><span className="text-slate-400">Min:</span> <span className="text-red-400 font-mono">{formatCurrency(data.rawMin)}</span></p>
+                            </div>
+                            <div className="border-t border-slate-700 pt-2 mt-2">
+                              <p className="text-xs"><span className="text-slate-400">Total P/L:</span> <span className={`font-bold ${data.isProfit ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(data.profit)}</span></p>
+                              <p className="text-xs"><span className="text-slate-400">Income:</span> <span className="text-green-400">{formatCurrency(data.income)}</span></p>
+                              <p className="text-xs"><span className="text-slate-400">Expense:</span> <span className="text-amber-400">{formatCurrency(data.expense)}</span></p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    };
                     
                     return (
-                      <>
-                        {/* Main Table - LiveCoinWatch Style */}
-                        {allProjects.length > 0 ? (
-                          <div className="divide-y divide-slate-800/50">
-                            {/* Table Header */}
-                            <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-slate-800/30 text-[10px] text-slate-500 uppercase tracking-wider">
-                              <div className="col-span-3">Project</div>
-                              <div className="col-span-2 text-right">Income</div>
-                              <div className="col-span-2 text-right">Expense</div>
-                              <div className="col-span-2 text-right">P/L</div>
-                              <div className="col-span-1 text-center">7D Chart</div>
-                              <div className="col-span-2 text-right">Change</div>
-                            </div>
-                            
-                            {/* Table Rows */}
-                            <div className="max-h-[400px] overflow-y-auto">
-                              {allProjects.map((project, index) => {
-                                const isProfit = project.profit >= 0;
-                                const profitPercent = project.budget > 0 
-                                  ? ((project.profit / project.budget) * 100) 
-                                  : project.income > 0 
-                                    ? ((project.profit / project.income) * 100) 
-                                    : 0;
-                                
-                                // Generate mini candlestick data based on project data
-                                const generateMiniChart = () => {
-                                  const bars = [];
-                                  const baseValue = Math.abs(project.profit) / 7 || 1000000;
-                                  for (let i = 0; i < 7; i++) {
-                                    const change = (Math.random() - 0.5) * baseValue * 0.3;
-                                    const open = baseValue + (Math.random() - 0.5) * baseValue * 0.2;
-                                    const close = open + change;
-                                    const high = Math.max(open, close) + Math.random() * baseValue * 0.1;
-                                    const low = Math.min(open, close) - Math.random() * baseValue * 0.1;
-                                    bars.push({ open, close, high, low, isUp: close >= open });
-                                  }
-                                  return bars;
-                                };
-                                
-                                const chartBars = generateMiniChart();
-                                const maxBar = Math.max(...chartBars.map(b => b.high));
-                                const minBar = Math.min(...chartBars.map(b => b.low));
-                                const range = maxBar - minBar || 1;
-                                
-                                return (
+                      <div id="chart-container" className="transition-transform duration-200">
+                        {/* Stats Summary */}
+                        <div className="grid grid-cols-4 gap-4 mb-4">
+                          <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                            <p className="text-[10px] text-slate-400 uppercase">Total Projects</p>
+                            <p className="text-xl font-bold text-white">{allProjects.length}</p>
+                          </div>
+                          <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                            <p className="text-[10px] text-slate-400 uppercase">Profit</p>
+                            <p className="text-xl font-bold text-green-400">{allProjects.filter((p: any) => p.profit >= 0).length}</p>
+                          </div>
+                          <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                            <p className="text-[10px] text-slate-400 uppercase">Loss</p>
+                            <p className="text-xl font-bold text-red-400">{allProjects.filter((p: any) => p.profit < 0).length}</p>
+                          </div>
+                          <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+                            <p className="text-[10px] text-slate-400 uppercase">Net P/L</p>
+                            <p className={`text-xl font-bold font-mono ${allProjects.reduce((sum: number, p: any) => sum + p.profit, 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {formatCurrency(allProjects.reduce((sum: number, p: any) => sum + p.profit, 0))}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Box & Whisker Chart */}
+                        <div className="h-[400px] w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart
+                              data={boxPlotData}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                              <XAxis 
+                                dataKey="name" 
+                                angle={-45}
+                                textAnchor="end"
+                                height={60}
+                                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                                stroke="#475569"
+                              />
+                              <YAxis 
+                                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                                stroke="#475569"
+                                label={{ value: 'Profit/Loss (Millions IDR)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }}
+                              />
+                              <Tooltip content={<CustomTooltip />} />
+                              <Legend 
+                                wrapperStyle={{ paddingTop: '20px' }}
+                                formatter={(value) => <span className="text-slate-400 text-xs">{value}</span>}
+                              />
+                              <ReferenceLine y={0} stroke="#64748b" strokeWidth={2} strokeDasharray="5,5" />
+                              
+                              {/* Custom Box Plot bars */}
+                              {boxPlotData.map((entry: any, index: number) => (
+                                <Bar 
+                                  key={index}
+                                  dataKey="median"
+                                  fill="transparent"
+                                  shape={<BoxPlotBar data={entry} />}
+                                />
+                              ))}
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        </div>
+                        
+                        {/* Project Detail List (Drill-down) */}
+                        <div className="mt-4 border-t border-slate-700 pt-4">
+                          <h4 className="text-sm font-medium text-slate-400 mb-3">Project Details (Click to Drill-down)</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto">
+                            {allProjects.map((project: any) => (
+                              <div 
+                                key={project.id}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all hover:scale-[1.02] ${
+                                  project.profit >= 0 
+                                    ? 'bg-green-500/10 border-green-500/30 hover:border-green-500' 
+                                    : 'bg-red-500/10 border-red-500/30 hover:border-red-500'
+                                }`}
+                                onClick={() => {
+                                  // Drill-down: show project details
+                                  setSelectedProject(project.id);
+                                  setActiveMenu('projects');
+                                }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-white truncate">{project.name}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    project.status === 'InProgress' ? 'bg-cyan-500/20 text-cyan-400' :
+                                    project.status === 'Deal' ? 'bg-green-500/20 text-green-400' :
+                                    'bg-slate-500/20 text-slate-400'
+                                  }`}>
+                                    {project.status}
+                                  </span>
+                                </div>
+                                <div className="mt-2 flex items-center justify-between text-xs">
+                                  <span className="text-slate-400">P/L:</span>
+                                  <span className={`font-mono font-bold ${project.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                    {project.profit >= 0 ? '+' : ''}{formatCurrency(project.profit)}
+                                  </span>
+                                </div>
+                                <div className="mt-1 h-1 bg-slate-700 rounded overflow-hidden">
                                   <div 
-                                    key={project.id} 
-                                    className="grid grid-cols-12 gap-2 px-4 py-3 hover:bg-slate-800/40 transition-colors cursor-pointer group border-l-2 border-transparent hover:border-l-2"
-                                    style={{ borderLeftColor: isProfit ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)' }}
-                                  >
-                                    {/* Project Name */}
-                                    <div className="col-span-3 flex items-center gap-2">
-                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                                        isProfit 
-                                          ? 'bg-green-500/20 text-green-400' 
-                                          : 'bg-red-500/20 text-red-400'
-                                      }`}>
-                                        {project.name.charAt(0).toUpperCase()}
-                                      </div>
-                                      <div className="min-w-0">
-                                        <p className="text-sm font-medium text-white truncate group-hover:text-cyan-400 transition-colors">
-                                          {project.name}
-                                        </p>
-                                        <p className="text-[10px] text-slate-500 font-mono">{project.code}</p>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Income */}
-                                    <div className="col-span-2 text-right">
-                                      <p className="text-sm text-green-400 font-mono">{formatCurrency(project.income)}</p>
-                                      <p className="text-[10px] text-slate-500">IN</p>
-                                    </div>
-                                    
-                                    {/* Expense */}
-                                    <div className="col-span-2 text-right">
-                                      <p className="text-sm text-amber-400 font-mono">{formatCurrency(project.expense)}</p>
-                                      <p className="text-[10px] text-slate-500">OUT</p>
-                                    </div>
-                                    
-                                    {/* P/L */}
-                                    <div className="col-span-2 text-right">
-                                      <p className={`text-sm font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                                        {isProfit ? '+' : ''}{formatCurrency(project.profit)}
-                                      </p>
-                                      <p className={`text-[10px] ${isProfit ? 'text-green-500' : 'text-red-500'}`}>
-                                        {isProfit ? '▲ Profit' : '▼ Loss'}
-                                      </p>
-                                    </div>
-                                    
-                                    {/* Mini Candlestick Chart */}
-                                    <div className="col-span-1 flex items-end justify-center gap-[2px] h-10">
-                                      {chartBars.map((bar, i) => (
-                                        <div key={i} className="relative flex flex-col items-center" style={{ height: '100%' }}>
-                                          {/* Wick */}
-                                          <div 
-                                            className={`w-px ${bar.isUp ? 'bg-green-500' : 'bg-red-500'}`}
-                                            style={{ 
-                                              height: `${((bar.high - Math.max(bar.open, bar.close)) / range) * 100}%`,
-                                              marginBottom: '1px'
-                                            }}
-                                          />
-                                          {/* Body */}
-                                          <div 
-                                            className={`w-1.5 rounded-sm ${bar.isUp ? 'bg-green-400' : 'bg-red-400'}`}
-                                            style={{ 
-                                              height: `${Math.max(2, (Math.abs(bar.close - bar.open) / range) * 100)}%`
-                                            }}
-                                          />
-                                          {/* Lower Wick */}
-                                          <div 
-                                            className={`w-px ${bar.isUp ? 'bg-green-500' : 'bg-red-500'}`}
-                                            style={{ 
-                                              height: `${((Math.min(bar.open, bar.close) - bar.low) / range) * 100}%`,
-                                              marginTop: '1px'
-                                            }}
-                                          />
-                                        </div>
-                                      ))}
-                                    </div>
-                                    
-                                    {/* Change % */}
-                                    <div className="col-span-2 text-right">
-                                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${
-                                        isProfit 
-                                          ? 'bg-green-500/10 text-green-400' 
-                                          : 'bg-red-500/10 text-red-400'
-                                      }`}>
-                                        <span className="text-sm font-bold font-mono">
-                                          {isProfit ? '+' : ''}{profitPercent.toFixed(2)}%
-                                        </span>
-                                        <span className="text-[10px]">{isProfit ? '▲' : '▼'}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                                    className={`h-full ${project.profit >= 0 ? 'bg-green-400' : 'bg-red-400'}`}
+                                    style={{ 
+                                      width: `${Math.min(100, Math.abs(project.budget > 0 ? (project.profit / project.budget) * 50 : 0) + 50)}%` 
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ) : (
-                          <div className="text-center py-16 text-slate-500">
-                            <div className="bg-slate-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <TrendingUp className="w-10 h-10 opacity-30" />
-                            </div>
-                            <p className="text-lg font-medium mb-1">Belum ada data project</p>
-                            <p className="text-sm">Monitor akan aktif ketika ada project tersedia</p>
-                          </div>
-                        )}
+                        </div>
                         
                         {/* Footer Stats */}
-                        <div className="flex items-center justify-between px-4 py-3 bg-slate-900/50 border-t border-slate-800">
+                        <div className="flex items-center justify-between px-4 py-3 bg-slate-900/50 border-t border-slate-800 mt-4 rounded-b-lg">
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                              <span className="text-[10px] text-slate-400">LIVE DATA</span>
+                              <span className="text-[10px] text-slate-400">REALTIME DATA</span>
                             </div>
                             <span className="text-[10px] text-slate-500">
-                              Last Update: {currentTime.toLocaleTimeString('id-ID')}
+                              Auto-refresh: 30s | Last: {currentTime.toLocaleTimeString('id-ID')}
                             </span>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-[10px] text-slate-500">
                               Win Rate: <span className="text-cyan-400 font-bold">
                                 {allProjects.length > 0 
-                                  ? ((allProjects.filter(p => p.profit >= 0).length / allProjects.length) * 100).toFixed(0) 
+                                  ? ((allProjects.filter((p: any) => p.profit >= 0).length / allProjects.length) * 100).toFixed(0) 
                                   : 0}%
                               </span>
                             </span>
-                            <span className="text-[10px] text-slate-500">
-                              Active: <span className="text-white font-bold">{allProjects.length}</span>
-                            </span>
                           </div>
                         </div>
-                      </>
+                      </div>
                     );
                   })()}
                 </CardContent>

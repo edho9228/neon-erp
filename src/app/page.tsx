@@ -2346,42 +2346,85 @@ export default function NEONERP() {
         </div>
       </header>
 
-      {/* 📊 LIVE Report Marquee */}
-      <div className="fixed top-16 left-0 right-0 h-8 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 z-40">
-        <div className="flex items-center h-full px-4">
+      {/* 📊 LIVE Report Marquee with P/L Ticker */}
+      <div className="fixed top-16 left-0 right-0 h-8 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 z-40 overflow-hidden">
+        <div className="flex items-center h-full">
           {/* Label */}
-          <div className="flex items-center gap-2 px-3 bg-gradient-to-r from-cyan-600/30 to-green-600/30 h-6 rounded border border-cyan-500/30 shrink-0">
+          <div className="flex items-center gap-2 px-3 bg-gradient-to-r from-cyan-600/30 to-green-600/30 h-full border-r border-slate-700 shrink-0">
             <span className="text-sm">📊</span>
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+            <div className="relative">
+              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+              <div className="absolute inset-0 w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+            </div>
             <span className="text-xs font-bold text-green-400">LIVE Report Project</span>
           </div>
           
-          {/* Marquee Content */}
-          <div className="flex-1 overflow-hidden ml-4">
-            {projectStats && projectStats.length > 0 ? (
-              <div className="animate-marquee whitespace-nowrap flex items-center">
-                {[...projectStats, ...projectStats].map((project, idx) => {
-                  const profit = project.income - project.expense;
-                  const isProfit = profit >= 0;
-                  const profitPercent = project.budget > 0 ? ((profit / project.budget) * 100) : 0;
-                  
-                  return (
-                    <span key={`${project.id}-${idx}`} className="inline-flex items-center gap-2 mx-4 text-xs">
-                      <span className="font-medium text-slate-200">{project.name}</span>
-                      <span className={`font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                        {isProfit ? '+' : ''}{formatCurrency(profit)}
-                      </span>
-                      <span className={`${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                        {isProfit ? '▲' : '▼'} {Math.abs(profitPercent).toFixed(1)}%
-                      </span>
-                      <span className="text-slate-600">|</span>
+          {/* Ticker Content - P/L Running Summary */}
+          <div className="flex-1 overflow-hidden ml-2">
+            {(() => {
+              const allProjects = projectStats;
+              const projectsWithFinance = allProjects.filter(p => p.income > 0 || p.expense > 0 || p.budget > 0);
+              const totalProfit = projectsWithFinance.filter(p => p.profit >= 0).reduce((sum, p) => sum + p.profit, 0);
+              const totalLoss = Math.abs(projectsWithFinance.filter(p => p.profit < 0).reduce((sum, p) => sum + p.profit, 0));
+              const netPL = totalProfit - totalLoss;
+              const profitCount = projectsWithFinance.filter(p => p.profit >= 0).length;
+              const lossCount = projectsWithFinance.filter(p => p.profit < 0).length;
+              
+              return (
+                <div className="animate-marquee-fast whitespace-nowrap flex items-center">
+                  {/* Net P/L */}
+                  <span className="inline-flex items-center gap-2 mx-4 text-xs">
+                    <span className="text-slate-500 uppercase">Net P/L</span>
+                    <span className={`font-bold font-mono ${netPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {netPL >= 0 ? '▲' : '▼'} {formatCurrency(Math.abs(netPL))}
                     </span>
-                  );
-                })}
-              </div>
-            ) : (
-              <span className="text-xs text-slate-500">Belum ada data project</span>
-            )}
+                  </span>
+                  <span className="text-slate-700">|</span>
+                  {/* Profit */}
+                  <span className="inline-flex items-center gap-2 mx-4 text-xs">
+                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                    <span className="text-slate-500">PROFIT</span>
+                    <span className="font-bold text-green-400 font-mono">{formatCurrency(totalProfit)}</span>
+                    <span className="text-green-500">({profitCount})</span>
+                  </span>
+                  <span className="text-slate-700">|</span>
+                  {/* Loss */}
+                  <span className="inline-flex items-center gap-2 mx-4 text-xs">
+                    <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                    <span className="text-slate-500">LOSS</span>
+                    <span className="font-bold text-red-400 font-mono">{formatCurrency(totalLoss)}</span>
+                    <span className="text-red-500">({lossCount})</span>
+                  </span>
+                  <span className="text-slate-700">|</span>
+                  {/* Total Projects */}
+                  <span className="inline-flex items-center gap-2 mx-4 text-xs">
+                    <span className="text-slate-500">TOTAL</span>
+                    <span className="font-bold text-cyan-400 font-mono">{allProjects.length}</span>
+                  </span>
+                  <span className="text-slate-700">|</span>
+                  {/* Individual Projects */}
+                  {allProjects.map((project) => {
+                    const isProfit = project.profit >= 0;
+                    const profitPercent = project.budget > 0 
+                      ? ((project.profit / project.budget) * 100) 
+                      : project.income > 0 
+                        ? ((project.profit / project.income) * 100) 
+                        : 0;
+                    return (
+                      <span key={project.id} className="inline-flex items-center gap-2 mx-4 text-xs">
+                        <span className="font-medium text-slate-200">{project.name}</span>
+                        <span className={`font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                          {isProfit ? '+' : ''}{formatCurrency(project.profit)}
+                        </span>
+                        <span className={isProfit ? 'text-green-400' : 'text-red-400'}>
+                          {isProfit ? '▲' : '▼'} {Math.abs(profitPercent).toFixed(1)}%
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -2740,50 +2783,9 @@ export default function NEONERP() {
                 <CardContent className="p-0">
                   {(() => {
                     const allProjects = projectStats;
-                    const projectsWithFinance = allProjects.filter(p => p.income > 0 || p.expense > 0 || p.budget > 0);
-                    const totalProfit = projectsWithFinance.filter(p => p.profit >= 0).reduce((sum, p) => sum + p.profit, 0);
-                    const totalLoss = Math.abs(projectsWithFinance.filter(p => p.profit < 0).reduce((sum, p) => sum + p.profit, 0));
-                    const netPL = totalProfit - totalLoss;
-                    const profitCount = projectsWithFinance.filter(p => p.profit >= 0).length;
-                    const lossCount = projectsWithFinance.filter(p => p.profit < 0).length;
                     
                     return (
                       <>
-                        {/* Ticker Bar - Running Summary */}
-                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-900/80 border-b border-slate-800 overflow-hidden">
-                          <div className="flex items-center gap-6 animate-marquee-fast">
-                            {/* Net P/L */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] text-slate-500 uppercase">Net P/L</span>
-                              <span className={`text-sm font-bold font-mono ${netPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {netPL >= 0 ? '▲' : '▼'} {formatCurrency(Math.abs(netPL))}
-                              </span>
-                            </div>
-                            <span className="text-slate-700">|</span>
-                            {/* Profit */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                              <span className="text-[10px] text-slate-500">PROFIT</span>
-                              <span className="text-sm font-bold text-green-400 font-mono">{formatCurrency(totalProfit)}</span>
-                              <span className="text-[10px] text-green-500">({profitCount})</span>
-                            </div>
-                            <span className="text-slate-700">|</span>
-                            {/* Loss */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="w-2 h-2 rounded-full bg-red-400"></span>
-                              <span className="text-[10px] text-slate-500">LOSS</span>
-                              <span className="text-sm font-bold text-red-400 font-mono">{formatCurrency(totalLoss)}</span>
-                              <span className="text-[10px] text-red-500">({lossCount})</span>
-                            </div>
-                            <span className="text-slate-700">|</span>
-                            {/* Total */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] text-slate-500">TOTAL</span>
-                              <span className="text-sm font-bold text-cyan-400 font-mono">{allProjects.length}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
                         {/* Main Table - LiveCoinWatch Style */}
                         {allProjects.length > 0 ? (
                           <div className="divide-y divide-slate-800/50">
@@ -2945,8 +2947,8 @@ export default function NEONERP() {
                           <div className="flex items-center gap-3">
                             <span className="text-[10px] text-slate-500">
                               Win Rate: <span className="text-cyan-400 font-bold">
-                                {projectsWithFinance.length > 0 
-                                  ? ((profitCount / projectsWithFinance.length) * 100).toFixed(0) 
+                                {allProjects.length > 0 
+                                  ? ((allProjects.filter(p => p.profit >= 0).length / allProjects.length) * 100).toFixed(0) 
                                   : 0}%
                               </span>
                             </span>

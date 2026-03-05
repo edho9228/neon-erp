@@ -2701,7 +2701,7 @@ export default function NEONERP() {
                 </Card>
               </div>
 
-              {/* Project Profit/Loss Chart - Stock Style */}
+              {/* Project Profit/Loss Chart - Lightweight CSS-Based */}
               <Card className="glass-card">
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -2710,7 +2710,7 @@ export default function NEONERP() {
                         <TrendingUp className="w-5 h-5 text-green-400" />
                         Project Profit/Loss Chart
                       </CardTitle>
-                      <CardDescription className="text-slate-400">Grafik akumulasi profit/loss project yang sedang berjalan</CardDescription>
+                      <CardDescription className="text-slate-400">Grafik profit/loss per project</CardDescription>
                     </div>
                     <div className="flex gap-4 text-xs">
                       <span className="flex items-center gap-1">
@@ -2726,13 +2726,9 @@ export default function NEONERP() {
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    // Get unique projects from projectMonthlyData
-                    const uniqueProjects = [...new Set(projectMonthlyData.map(d => d.projectId))];
-                    const uniqueMonths = [...new Set(projectMonthlyData.map(d => d.month))];
-                    
-                    // Filter projects that have transactions (ongoing projects)
+                    // Get all projects with any transactions or income/expense
                     const projectsWithFinance = projectStats.filter(p => 
-                      (p.status === 'InProgress' || p.status === 'Deal') && (p.income > 0 || p.expense > 0)
+                      p.income > 0 || p.expense > 0
                     );
                     
                     // Calculate totals for summary
@@ -2740,28 +2736,11 @@ export default function NEONERP() {
                     const totalLoss = Math.abs(projectsWithFinance.filter(p => p.profit < 0).reduce((sum, p) => sum + p.profit, 0));
                     const profitProjects = projectsWithFinance.filter(p => p.profit >= 0).length;
                     const lossProjects = projectsWithFinance.filter(p => p.profit < 0).length;
-                    
-                    // Color palette for project lines
-                    const lineColors = [
-                      '#00ff41', '#00f3ff', '#f59e0b', '#a855f7', '#f97316', 
-                      '#3b82f6', '#ec4899', '#14b8a6', '#84cc16', '#f43f5e'
-                    ];
-                    
-                    // Prepare chart data - pivot the data
-                    const chartData = uniqueMonths.map(month => {
-                      const dataPoint: any = { month };
-                      projectMonthlyData
-                        .filter(d => d.month === month)
-                        .forEach(d => {
-                          dataPoint[d.projectId] = d.cumulativeProfit;
-                          dataPoint[`${d.projectId}_name`] = d.projectName;
-                        });
-                      return dataPoint;
-                    });
+                    const maxAbsValue = Math.max(Math.abs(totalProfit), Math.abs(totalLoss), 1);
                     
                     return (
                       <>
-                        {/* Summary Cards - Ticker Style */}
+                        {/* Summary Cards */}
                         <div className="grid grid-cols-4 gap-3 mb-6">
                           <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/30 rounded-lg p-3">
                             <div className="flex items-center justify-between">
@@ -2807,133 +2786,74 @@ export default function NEONERP() {
                           <div className="bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/30 rounded-lg p-3">
                             <div className="flex items-center justify-between">
                               <div>
-                                <p className="text-xs text-slate-400">Active Projects</p>
+                                <p className="text-xs text-slate-400">Projects</p>
                                 <p className="text-lg font-bold text-cyan-400">{projectsWithFinance.length}</p>
                               </div>
                               <div className="text-cyan-400 text-xs">
-                                {((profitProjects / Math.max(1, projectsWithFinance.length)) * 100).toFixed(0)}% Profit
+                                {projectsWithFinance.length > 0 ? ((profitProjects / projectsWithFinance.length) * 100).toFixed(0) : 0}% Profit
                               </div>
                             </div>
                           </div>
                         </div>
                         
-                        {/* Stock-Style Chart */}
-                        {uniqueProjects.length > 0 ? (
-                          <div className="relative">
-                            {/* Main Chart */}
+                        {/* CSS-Based Bar Chart */}
+                        {projectsWithFinance.length > 0 ? (
+                          <div className="space-y-3">
+                            {/* Horizontal Bar Chart */}
                             <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
-                              <ResponsiveContainer width="100%" height={350}>
-                                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                                  {/* Custom grid - stock style */}
-                                  <CartesianGrid 
-                                    strokeDasharray="3 3" 
-                                    stroke="#334155" 
-                                    vertical={true}
-                                    horizontal={true}
-                                  />
-                                  <XAxis 
-                                    dataKey="month" 
-                                    stroke="#64748b"
-                                    tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                    axisLine={{ stroke: '#475569' }}
-                                    tickLine={{ stroke: '#475569' }}
-                                  />
-                                  <YAxis 
-                                    stroke="#64748b"
-                                    tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                    axisLine={{ stroke: '#475569' }}
-                                    tickLine={{ stroke: '#475569' }}
-                                    tickFormatter={(value) => {
-                                      if (Math.abs(value) >= 1000000000) return `${(value / 1000000000).toFixed(1)}B`;
-                                      if (Math.abs(value) >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-                                      if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(0)}K`;
-                                      return value;
-                                    }}
-                                  />
-                                  <Tooltip 
-                                    contentStyle={{ 
-                                      backgroundColor: '#1e293b', 
-                                      border: '1px solid #475569',
-                                      borderRadius: '8px',
-                                      boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
-                                    }}
-                                    labelStyle={{ color: '#f1f5f9', fontWeight: 'bold', marginBottom: '8px' }}
-                                    formatter={(value: any, name: string) => {
-                                      const projectId = name;
-                                      const projectName = projectMonthlyData.find(d => d.projectId === projectId)?.projectName || name;
-                                      return [
-                                        <span key="value" style={{ color: value >= 0 ? '#00ff41' : '#f43f5e' }}>
-                                          {formatCurrency(value)}
-                                        </span>,
-                                        <span key="name" style={{ color: '#94a3b8' }}>{projectName}</span>
-                                      ];
-                                    }}
-                                  />
-                                  <Legend 
-                                    wrapperStyle={{ paddingTop: '20px' }}
-                                    formatter={(value) => {
-                                      const project = projectMonthlyData.find(d => d.projectId === value);
-                                      return <span style={{ color: '#94a3b8', fontSize: '12px' }}>{project?.projectName || value}</span>;
-                                    }}
-                                  />
-                                  {/* Dynamic lines for each project */}
-                                  {uniqueProjects.map((projectId, index) => {
-                                    const projectData = projectMonthlyData.find(d => d.projectId === projectId);
-                                    const lastValue = projectData ? projectMonthlyData.filter(d => d.projectId === projectId).slice(-1)[0]?.cumulativeProfit : 0;
-                                    const isPositive = lastValue >= 0;
-                                    const color = lineColors[index % lineColors.length];
-                                    
-                                    return (
-                                      <Line 
-                                        key={projectId}
-                                        type="monotone"
-                                        dataKey={projectId}
-                                        name={projectId}
-                                        stroke={color}
-                                        strokeWidth={2}
-                                        dot={{ r: 3, fill: color }}
-                                        activeDot={{ r: 5, fill: color, stroke: '#fff', strokeWidth: 2 }}
-                                      />
-                                    );
-                                  })}
-                                  {/* Zero line reference */}
-                                  <ReferenceLine y={0} stroke="#64748b" strokeDasharray="5 5" />
-                                </LineChart>
-                              </ResponsiveContainer>
-                            </div>
-                            
-                            {/* Project Ticker Bar */}
-                            <div className="mt-4 bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                              <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                                <span className="text-xs text-slate-500 shrink-0 font-medium">LIVE:</span>
-                                {uniqueProjects.map((projectId, index) => {
-                                  const projectData = projectMonthlyData.filter(d => d.projectId === projectId);
-                                  const lastData = projectData.slice(-1)[0];
-                                  const prevData = projectData.slice(-2)[0];
-                                  const change = lastData && prevData ? lastData.cumulativeProfit - prevData.cumulativeProfit : 0;
-                                  const changePercent = prevData && prevData.cumulativeProfit !== 0 
-                                    ? ((change / Math.abs(prevData.cumulativeProfit)) * 100).toFixed(1) 
-                                    : '0.0';
-                                  const isPositive = lastData?.cumulativeProfit >= 0;
-                                  const color = lineColors[index % lineColors.length];
+                              <div className="space-y-3">
+                                {projectsWithFinance.slice(0, 10).map((project, index) => {
+                                  const isProfit = project.profit >= 0;
+                                  const barWidth = Math.min(100, (Math.abs(project.profit) / maxAbsValue) * 100);
+                                  const colors = [
+                                    { profit: 'from-green-500 to-emerald-400', loss: 'from-red-500 to-rose-400' },
+                                    { profit: 'from-cyan-500 to-teal-400', loss: 'from-orange-500 to-amber-400' },
+                                    { profit: 'from-blue-500 to-indigo-400', loss: 'from-pink-500 to-rose-400' },
+                                    { profit: 'from-purple-500 to-violet-400', loss: 'from-yellow-500 to-orange-400' },
+                                    { profit: 'from-teal-500 to-cyan-400', loss: 'from-red-600 to-red-400' },
+                                  ];
+                                  const colorSet = colors[index % colors.length];
                                   
                                   return (
-                                    <div 
-                                      key={projectId}
-                                      className="flex items-center gap-2 px-3 py-2 bg-slate-900/50 rounded border border-slate-700/50 shrink-0 hover:border-slate-600 transition-colors"
-                                    >
-                                      <div 
-                                        className="w-2 h-2 rounded-full animate-pulse"
-                                        style={{ backgroundColor: color }}
-                                      />
-                                      <div className="text-xs">
-                                        <span className="text-slate-300 font-medium">{lastData?.projectName}</span>
-                                        <div className="flex items-center gap-1 mt-0.5">
-                                          <span className={`font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                                            {formatCurrency(lastData?.cumulativeProfit || 0)}
+                                    <div key={project.id} className="group">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm text-slate-300 truncate max-w-[200px]" title={project.name}>
+                                            {project.name}
                                           </span>
-                                          <span className={`text-[10px] ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {change >= 0 ? '▲' : '▼'} {Math.abs(parseFloat(changePercent))}%
+                                          <span className={`text-xs px-2 py-0.5 rounded ${
+                                            project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
+                                            project.status === 'Deal' ? 'bg-green-500/20 text-green-400' :
+                                            project.status === 'Completed' ? 'bg-purple-500/20 text-purple-400' :
+                                            'bg-slate-500/20 text-slate-400'
+                                          }`}>
+                                            {project.status}
+                                          </span>
+                                        </div>
+                                        <span className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                                          {isProfit ? '+' : ''}{formatCurrency(project.profit)}
+                                        </span>
+                                      </div>
+                                      <div className="relative h-6 bg-slate-800 rounded-full overflow-hidden">
+                                        {/* Grid lines */}
+                                        <div className="absolute inset-0 flex">
+                                          <div className="flex-1 border-r border-slate-700"></div>
+                                          <div className="flex-1 border-r border-slate-700"></div>
+                                          <div className="flex-1 border-r border-slate-700"></div>
+                                          <div className="flex-1 border-r border-slate-700"></div>
+                                          <div className="flex-1"></div>
+                                        </div>
+                                        {/* Bar */}
+                                        <div 
+                                          className={`absolute top-0 h-full bg-gradient-to-r ${isProfit ? colorSet.profit : colorSet.loss} transition-all duration-700 ease-out rounded-full`}
+                                          style={{ width: `${barWidth}%`, left: isProfit ? 0 : 'auto', right: isProfit ? 'auto' : 0 }}
+                                        >
+                                          <div className="absolute inset-0 bg-white/10 rounded-full"></div>
+                                        </div>
+                                        {/* Percentage inside bar */}
+                                        <div className="absolute inset-0 flex items-center px-2">
+                                          <span className="text-xs font-medium text-white drop-shadow-lg">
+                                            {project.profitMargin.toFixed(1)}% margin
                                           </span>
                                         </div>
                                       </div>
@@ -2942,14 +2862,49 @@ export default function NEONERP() {
                                 })}
                               </div>
                             </div>
+                            
+                            {/* Project Cards - Quick View */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                              {projectsWithFinance.slice(0, 8).map((project) => {
+                                const isProfit = project.profit >= 0;
+                                return (
+                                  <div 
+                                    key={project.id} 
+                                    className={`p-3 rounded-lg border transition-all hover:scale-105 ${
+                                      isProfit 
+                                        ? 'bg-green-500/5 border-green-500/30 hover:border-green-400' 
+                                        : 'bg-red-500/5 border-red-500/30 hover:border-red-400'
+                                    }`}
+                                  >
+                                    <div className="flex items-start justify-between mb-2">
+                                      <span className="text-xs text-slate-400 truncate max-w-[100px]" title={project.name}>
+                                        {project.name}
+                                      </span>
+                                      {isProfit ? (
+                                        <TrendingUp className="w-4 h-4 text-green-400 shrink-0" />
+                                      ) : (
+                                        <TrendingDown className="w-4 h-4 text-red-400 shrink-0" />
+                                      )}
+                                    </div>
+                                    <p className={`text-lg font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                                      {isProfit ? '+' : ''}{formatCurrency(project.profit)}
+                                    </p>
+                                    <div className="flex justify-between text-xs text-slate-500 mt-1">
+                                      <span>In: {formatCurrency(project.income)}</span>
+                                      <span>Out: {formatCurrency(project.expense)}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         ) : (
                           <div className="text-center py-16 text-slate-500">
                             <div className="bg-slate-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                               <TrendingUp className="w-10 h-10 opacity-30" />
                             </div>
-                            <p className="text-lg font-medium mb-1">Belum ada data grafik</p>
-                            <p className="text-sm">Grafik akan ditampilkan ketika ada project yang sedang berjalan dengan transaksi</p>
+                            <p className="text-lg font-medium mb-1">Belum ada data transaksi</p>
+                            <p className="text-sm">Grafik akan ditampilkan ketika ada project dengan transaksi income/expense</p>
                           </div>
                         )}
                       </>
@@ -2958,7 +2913,7 @@ export default function NEONERP() {
                 </CardContent>
               </Card>
 
-              {/* Project Schedule Timeline */}
+              {/* Project Schedule Timeline - Lightweight */}
               <Card className="glass-card">
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -2971,329 +2926,164 @@ export default function NEONERP() {
                     </div>
                     <div className="flex gap-4 text-xs">
                       <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-cyan-400"></span>
-                        <span className="text-slate-400">Time Progress</span>
+                        <span className="w-3 h-3 rounded bg-green-500"></span>
+                        <span className="text-slate-400">On Track</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-green-400"></span>
-                        <span className="text-slate-400">Work Progress</span>
+                        <span className="w-3 h-3 rounded bg-amber-500"></span>
+                        <span className="text-slate-400">Behind</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-red-400"></span>
+                        <span className="w-3 h-3 rounded bg-red-500"></span>
                         <span className="text-slate-400">Overdue</span>
                       </span>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {projectStats.filter(p => p.startDate || p.endDate).length > 0 ? (
-                      projectStats.filter(p => p.startDate || p.endDate).map((project) => {
-                        const startDate = project.startDate ? new Date(project.startDate) : null;
-                        const endDate = project.endDate ? new Date(project.endDate) : null;
-                        const today = new Date();
-                        
-                        // Calculate time progress
-                        let timeProgress = 0;
-                        let daysElapsed = 0;
-                        let daysRemaining = 0;
-                        let totalDays = 0;
-                        let isOverdue = false;
-                        
-                        if (startDate && endDate) {
-                          totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                          daysElapsed = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                          daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                  {(() => {
+                    // Get all projects, sort by status priority
+                    const allProjects = projectStats.sort((a, b) => {
+                      const statusOrder: Record<string, number> = { InProgress: 1, Deal: 2, Completed: 3, Cancelled: 4 };
+                      return (statusOrder[a.status] || 5) - (statusOrder[b.status] || 5);
+                    });
+                    
+                    const today = new Date();
+                    
+                    return allProjects.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {allProjects.map((project) => {
+                          const startDate = project.startDate ? new Date(project.startDate) : null;
+                          const endDate = project.endDate ? new Date(project.endDate) : null;
                           
-                          if (daysElapsed < 0) {
-                            timeProgress = 0; // Not started yet
-                            daysElapsed = 0;
-                          } else if (daysRemaining < 0) {
-                            timeProgress = 100;
-                            isOverdue = true;
-                            daysRemaining = 0;
-                          } else {
-                            timeProgress = Math.min(100, Math.max(0, (daysElapsed / totalDays) * 100));
+                          // Calculate time progress
+                          let timeProgress = 0;
+                          let daysElapsed = 0;
+                          let daysRemaining = 0;
+                          let isOverdue = false;
+                          let isBehind = false;
+                          let isAhead = false;
+                          
+                          if (startDate && endDate) {
+                            const totalDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+                            daysElapsed = Math.max(0, Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+                            daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+                            
+                            if (today > endDate) {
+                              timeProgress = 100;
+                              isOverdue = project.progress < 100;
+                            } else if (today < startDate) {
+                              timeProgress = 0;
+                            } else {
+                              timeProgress = Math.min(100, (daysElapsed / totalDays) * 100);
+                            }
                           }
-                        }
-                        
-                        const workProgress = project.progress || 0;
-                        const progressDiff = workProgress - timeProgress;
-                        const isBehindSchedule = progressDiff < -10;
-                        const isOnTrack = progressDiff >= -10 && progressDiff <= 10;
-                        const isAheadSchedule = progressDiff > 10;
-                        
-                        return (
-                          <div key={project.id} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                <h4 className="font-medium text-white flex items-center gap-2">
-                                  {project.name}
-                                  {isOverdue && (
-                                    <Badge className="bg-red-500/20 text-red-400 border-red-500/50 text-xs">
-                                      <AlertTriangle className="w-3 h-3 mr-1" />
-                                      OVERDUE
-                                    </Badge>
-                                  )}
-                                  {isAheadSchedule && !isOverdue && (
-                                    <Badge className="bg-green-500/20 text-green-400 border-green-500/50 text-xs">
-                                      <TrendingUp className="w-3 h-3 mr-1" />
-                                      AHEAD
-                                    </Badge>
-                                  )}
-                                  {isBehindSchedule && !isOverdue && (
-                                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/50 text-xs">
-                                      <Clock className="w-3 h-3 mr-1" />
-                                      BEHIND
-                                    </Badge>
-                                  )}
-                                  {isOnTrack && !isOverdue && (
-                                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
-                                      ON TRACK
-                                    </Badge>
-                                  )}
-                                </h4>
-                                <p className="text-xs text-slate-500">{project.code}</p>
-                              </div>
-                              <div className="text-right">
-                                <div className="flex gap-4 text-xs">
-                                  <div>
-                                    <p className="text-slate-400">Start</p>
-                                    <p className="text-cyan-400 font-medium">{startDate?.toLocaleDateString('id-ID') || '-'}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-slate-400">Finish</p>
-                                    <p className="text-pink-400 font-medium">{endDate?.toLocaleDateString('id-ID') || '-'}</p>
-                                  </div>
+                          
+                          const workProgress = project.progress || 0;
+                          const progressDiff = workProgress - timeProgress;
+                          isBehind = progressDiff < -10 && !isOverdue;
+                          isAhead = progressDiff > 10 && !isOverdue;
+                          
+                          // Determine status color
+                          const statusColor = isOverdue 
+                            ? 'border-red-500/50 bg-red-500/5' 
+                            : isBehind 
+                              ? 'border-amber-500/50 bg-amber-500/5' 
+                              : isAhead
+                                ? 'border-green-500/50 bg-green-500/5'
+                                : 'border-slate-700 bg-slate-800/30';
+                          
+                          return (
+                            <div key={project.id} className={`rounded-lg border p-4 transition-all hover:scale-[1.02] ${statusColor}`}>
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-white text-sm truncate" title={project.name}>
+                                    {project.name}
+                                  </h4>
+                                  <p className="text-xs text-slate-500">{project.code}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
+                                    project.status === 'Deal' ? 'bg-green-500/20 text-green-400' :
+                                    project.status === 'Completed' ? 'bg-purple-500/20 text-purple-400' :
+                                    'bg-slate-500/20 text-slate-400'
+                                  }`}>
+                                    {project.status}
+                                  </span>
+                                  {isOverdue && <AlertTriangle className="w-4 h-4 text-red-400" />}
+                                  {isAhead && !isOverdue && <TrendingUp className="w-4 h-4 text-green-400" />}
+                                  {isBehind && !isOverdue && <Clock className="w-4 h-4 text-amber-400" />}
                                 </div>
                               </div>
-                            </div>
-                            
-                            {/* Timeline Progress Bar */}
-                            <div className="relative mb-2">
-                              {/* Background timeline */}
-                              <div className="h-6 bg-slate-700 rounded-full overflow-hidden relative">
-                                {/* Time progress (cyan) */}
-                                <div 
-                                  className={`absolute left-0 top-0 h-full ${isOverdue ? 'bg-red-500/50' : 'bg-cyan-500/30'} transition-all duration-500`}
-                                  style={{ width: `${timeProgress}%` }}
-                                />
-                                {/* Work progress (green) */}
-                                <div 
-                                  className={`absolute left-0 top-0 h-full ${isOverdue ? 'bg-red-500' : isBehindSchedule ? 'bg-amber-500' : 'bg-green-500'} transition-all duration-500`}
-                                  style={{ width: `${workProgress}%` }}
-                                />
-                                {/* Current date marker */}
-                                {!isOverdue && timeProgress > 0 && timeProgress < 100 && (
+                              
+                              {/* Progress Bar */}
+                              <div className="mb-3">
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="text-slate-400">Progress</span>
+                                  <span className="text-white font-medium">{workProgress}%</span>
+                                </div>
+                                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
                                   <div 
-                                    className="absolute top-0 w-0.5 h-full bg-white shadow-lg"
-                                    style={{ left: `${timeProgress}%` }}
+                                    className={`h-full transition-all duration-500 rounded-full ${
+                                      isOverdue ? 'bg-red-500' : isBehind ? 'bg-amber-500' : 'bg-green-500'
+                                    }`}
+                                    style={{ width: `${workProgress}%` }}
                                   />
-                                )}
+                                </div>
                               </div>
-                              {/* Percentage labels */}
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-xs font-bold text-white drop-shadow-lg">
-                                  {workProgress.toFixed(0)}% Complete
-                                </span>
+                              
+                              {/* Date Info */}
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="bg-slate-800/50 rounded px-2 py-1">
+                                  <p className="text-slate-500">Start</p>
+                                  <p className="text-cyan-400 font-medium">
+                                    {startDate ? startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}
+                                  </p>
+                                </div>
+                                <div className="bg-slate-800/50 rounded px-2 py-1">
+                                  <p className="text-slate-500">Finish</p>
+                                  <p className={`${isOverdue ? 'text-red-400' : 'text-pink-400'} font-medium`}>
+                                    {endDate ? endDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}
+                                  </p>
+                                </div>
                               </div>
+                              
+                              {/* Days Info */}
+                              {(startDate && endDate) && (
+                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-700/50 text-xs">
+                                  <span className="text-slate-400">
+                                    Elapsed: <span className="text-white font-medium">{daysElapsed}</span> days
+                                  </span>
+                                  <span className={isOverdue ? 'text-red-400 font-medium' : 'text-slate-400'}>
+                                    {isOverdue ? 'Overdue!' : `Remaining: ${daysRemaining} days`}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            
-                            {/* Stats row */}
-                            <div className="flex justify-between items-center text-xs">
-                              <div className="flex gap-6">
-                                <div>
-                                  <span className="text-slate-400">Time Progress: </span>
-                                  <span className={isOverdue ? 'text-red-400 font-medium' : 'text-cyan-400 font-medium'}>
-                                    {timeProgress.toFixed(0)}%
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-slate-400">Work Progress: </span>
-                                  <span className={`font-medium ${isOverdue ? 'text-red-400' : isBehindSchedule ? 'text-amber-400' : 'text-green-400'}`}>
-                                    {workProgress.toFixed(0)}%
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-slate-400">Diff: </span>
-                                  <span className={`font-medium ${progressDiff >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                    {progressDiff > 0 ? '+' : ''}{progressDiff.toFixed(0)}%
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex gap-4">
-                                <div>
-                                  <span className="text-slate-400">Days Elapsed: </span>
-                                  <span className="text-white font-medium">{daysElapsed}</span>
-                                </div>
-                                <div>
-                                  <span className="text-slate-400">Days Remaining: </span>
-                                  <span className={isOverdue ? 'text-red-400 font-medium' : 'text-white font-medium'}>{daysRemaining}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="text-center py-8 text-slate-500">
-                        <Calendar className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                        <p>No projects with schedule data</p>
-                        <p className="text-xs">Add start and end dates to projects to see timeline</p>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
+                    ) : (
+                      <div className="text-center py-12 text-slate-500">
+                        <Calendar className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                        <p className="text-lg font-medium">Belum ada project</p>
+                        <p className="text-sm">Tambah project untuk melihat timeline</p>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
 
-              {/* Gantt-style Schedule Overview */}
-              {projectStats.filter(p => p.startDate && p.endDate).length > 0 && (
-                <Card className="glass-card">
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <CardTitle className="text-white text-lg flex items-center gap-2">
-                          <ArrowRightLeft className="w-5 h-5 text-purple-400" />
-                          Project Gantt Schedule
-                        </CardTitle>
-                        <CardDescription className="text-slate-400">Visual timeline of all project schedules</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {/* Timeline header - months */}
-                      {(() => {
-                        const allProjects = projectStats.filter(p => p.startDate && p.endDate);
-                        if (allProjects.length === 0) return null;
-                        
-                        // Find min and max dates
-                        const minDate = new Date(Math.min(...allProjects.map(p => new Date(p.startDate!).getTime())));
-                        const maxDate = new Date(Math.max(...allProjects.map(p => new Date(p.endDate!).getTime())));
-                        
-                        // Generate month labels
-                        const months: Date[] = [];
-                        const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-                        while (current <= maxDate) {
-                          months.push(new Date(current));
-                          current.setMonth(current.getMonth() + 1);
-                        }
-                        
-                        const totalDays = Math.ceil((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
-                        
-                        return (
-                          <>
-                            {/* Month headers */}
-                            <div className="flex border-b border-slate-700 pb-2 mb-3">
-                              <div className="w-48 shrink-0"></div>
-                              <div className="flex-1 flex">
-                                {months.map((month, idx) => (
-                                  <div key={idx} className="flex-1 text-center text-xs text-slate-400">
-                                    {month.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' })}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            
-                            {/* Project rows */}
-                            {allProjects.map((project) => {
-                              const startDate = new Date(project.startDate!);
-                              const endDate = new Date(project.endDate!);
-                              
-                              // Calculate position
-                              const startOffset = Math.max(0, (startDate.getTime() - minDate.getTime()) / (maxDate.getTime() - minDate.getTime()) * 100);
-                              const duration = ((endDate.getTime() - startDate.getTime()) / (maxDate.getTime() - minDate.getTime()) * 100);
-                              
-                              // Calculate time progress for color
-                              const today = new Date();
-                              const totalProjectDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                              const daysElapsed = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                              const timeProgress = daysElapsed < 0 ? 0 : daysElapsed > totalProjectDays ? 100 : (daysElapsed / totalProjectDays) * 100;
-                              const workProgress = project.progress || 0;
-                              const isOverdue = today > endDate && workProgress < 100;
-                              const isBehind = timeProgress > workProgress + 10;
-                              
-                              return (
-                                <div key={project.id} className="flex items-center group hover:bg-slate-800/30 rounded px-2 py-2">
-                                  <div className="w-48 shrink-0 pr-4">
-                                    <p className="text-sm text-white truncate font-medium">{project.name}</p>
-                                    <p className="text-xs text-slate-500">{project.code}</p>
-                                  </div>
-                                  <div className="flex-1 relative h-8 bg-slate-800/50 rounded">
-                                    {/* Gantt bar */}
-                                    <div 
-                                      className={`absolute top-1 h-6 rounded transition-all duration-300 group-hover:shadow-lg ${
-                                        isOverdue ? 'bg-gradient-to-r from-red-600 to-red-400' :
-                                        isBehind ? 'bg-gradient-to-r from-amber-600 to-amber-400' :
-                                        'bg-gradient-to-r from-cyan-600 to-purple-500'
-                                      }`}
-                                      style={{
-                                        left: `${startOffset}%`,
-                                        width: `${Math.max(2, duration)}%`
-                                      }}
-                                    >
-                                      {/* Progress fill */}
-                                      <div 
-                                        className={`absolute left-0 top-0 h-full rounded ${isOverdue ? 'bg-red-300/30' : 'bg-white/30'}`}
-                                        style={{ width: `${workProgress}%` }}
-                                      />
-                                      {/* Progress text */}
-                                      <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-xs font-bold text-white drop-shadow-lg">{workProgress}%</span>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Today marker */}
-                                    {(() => {
-                                      const todayOffset = ((today.getTime() - minDate.getTime()) / (maxDate.getTime() - minDate.getTime()) * 100);
-                                      if (todayOffset >= 0 && todayOffset <= 100) {
-                                        return (
-                                          <div 
-                                            className="absolute top-0 w-0.5 h-full bg-white/50"
-                                            style={{ left: `${todayOffset}%` }}
-                                          />
-                                        );
-                                      }
-                                      return null;
-                                    })()}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            
-                            {/* Legend */}
-                            <div className="flex justify-end gap-6 mt-4 pt-3 border-t border-slate-700 text-xs">
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-3 rounded bg-gradient-to-r from-cyan-600 to-purple-500"></div>
-                                <span className="text-slate-400">On Track</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-3 rounded bg-gradient-to-r from-amber-600 to-amber-400"></div>
-                                <span className="text-slate-400">Behind Schedule</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-3 rounded bg-gradient-to-r from-red-600 to-red-400"></div>
-                                <span className="text-slate-400">Overdue</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-0.5 h-3 bg-white/50"></div>
-                                <span className="text-slate-400">Today</span>
-                              </div>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Project Progress Report Chart */}
+              {/* Project Progress Report Chart - Lightweight */}
               <Card className="glass-card">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-white text-lg">Project Progress Report</CardTitle>
+                      <CardTitle className="text-white text-lg flex items-center gap-2">
+                        <BarChart className="w-5 h-5 text-purple-400" />
+                        Project Progress Report
+                      </CardTitle>
                       <CardDescription className="text-slate-400">Budget vs Progress Over Time</CardDescription>
                     </div>
                     <div className="flex gap-4">

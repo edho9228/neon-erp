@@ -160,6 +160,8 @@ interface AssetLoan {
 
 interface DashboardStats {
   totalProjects: number;
+  activeProjects: number;
+  completedProjects: number;
   totalContractValue: number;
   totalBudget: number;
   totalExpense: number;
@@ -2384,28 +2386,16 @@ export default function NEONERP() {
         </div>
       </div>
 
-      {/* Project Selector - Below Marquee */}
+      {/* Project Stats Bar - Below Marquee */}
       <div className="fixed top-24 left-0 right-0 h-12 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 flex items-center px-6 gap-4 z-30">
-        <Select value={selectedProject} onValueChange={setSelectedProject}>
-          <SelectTrigger className="w-72 bg-slate-800 border-slate-700">
-            <SelectValue placeholder="Pilih Project" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Project</SelectItem>
-            {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <span>•</span>
-          <span>{projects.length} Projects</span>
-          <span>•</span>
-          <span>{projects.filter(p => p.status === 'InProgress').length} Active</span>
+        {/* Left Side - Project Stats */}
+        <div className="flex items-center gap-3 text-sm">
+          <span className="text-cyan-400 font-bold">• {projects.length} Projects</span>
+          <span className="text-green-400">• {projects.filter(p => p.status === 'InProgress').length} Active</span>
+          <span className="text-purple-400">• {projects.filter(p => p.status === 'Completed').length} Completed</span>
         </div>
         
-        {/* Time and Date Display - Right Side */}
+        {/* Right Side - Time and Date Display */}
         <div className="ml-auto flex items-center gap-3 text-right">
           <div className="flex flex-col">
             <span className="text-sm font-medium text-cyan-400 font-mono flex items-center gap-1.5">

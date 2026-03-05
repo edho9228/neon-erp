@@ -9,41 +9,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const projectId = searchParams.get('projectId');
-
-    // Build where clause for filtering
-    const projectWhere = projectId && projectId !== 'all' ? { id: projectId } : {};
-
-    // Get projects with error handling
-    let projects: any[] = [];
+    // Get ALL projects for counts
+    let allProjects: any[] = [];
     try {
-      projects = await db.project.findMany({
-        where: projectWhere,
+      allProjects = await db.project.findMany({
         include: {
           client: true,
           transactions: true,
           rabItems: true,
-          progressHistory: {
-            orderBy: { date: 'desc' },
-            take: 5,
-          },
         },
         orderBy: { createdAt: 'desc' },
       });
     } catch (e) {
       console.error('Error fetching projects:', e);
-      // Return empty projects if error
-      projects = [];
+      allProjects = [];
     }
 
-    // Calculate stats
+    // Filter out COMPLETED projects for dashboard charts - only show active projects
+    const activeProjects = allProjects.filter(p => p.status !== 'Completed');
+
+    // Calculate stats from ACTIVE projects only
     let totalBudget = 0;
     let totalExpense = 0;
     let totalIncome = 0;
     let totalContractValue = 0;
 
-    const projectStats = projects.map(p => {
+    const projectStats = activeProjects.map(p => {
       const budget = p.rabItems?.reduce((sum: number, item: any) => sum + item.totalPrice, 0) || 0;
       const expense = p.transactions?.filter((t: any) => t.type === 'Expense').reduce((sum: number, t: any) => sum + t.amount, 0) || 0;
       const income = p.transactions?.filter((t: any) => t.type === 'Income').reduce((sum: number, t: any) => sum + t.amount, 0) || 0;
@@ -74,7 +65,12 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Daily data - Last 30 days
+    // Calculate total stats including completed for display
+    const totalProjectsCount = allProjects.length;
+    const activeProjectsCount = allProjects.filter(p => p.status === 'InProgress').length;
+    const completedProjectsCount = allProjects.filter(p => p.status === 'Completed').length;
+
+    // Daily data - Last 30 days (from ALL transactions)
     const dailyData: { date: string; income: number; expense: number; profit: number; cumulativeProfit: number }[] = [];
     const now = new Date();
     let totalCumulativeProfit = 0;
@@ -92,13 +88,16 @@ export async function GET(request: NextRequest) {
 
       let dayTransactions: any[] = [];
       try {
+        // Only get transactions from ACTIVE (non-completed) projects
         dayTransactions = await db.transaction.findMany({
           where: {
             date: {
               gte: dayStart,
               lte: dayEnd,
             },
-            ...(projectId && projectId !== 'all' ? { projectId } : {}),
+            project: {
+              status: { not: 'Completed' }
+            }
           },
         });
       } catch (e) {
@@ -119,8 +118,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Project status distribution
-    const statusCounts = projects.reduce((acc, p) => {
+    // Project status distribution (for all projects)
+    const statusCounts = allProjects.reduce((acc, p) => {
       acc[p.status] = (acc[p.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -130,11 +129,15 @@ export async function GET(request: NextRequest) {
       count,
     }));
 
-    // Recent transactions
+    // Recent transactions (from active projects only)
     let recentTransactions: any[] = [];
     try {
       recentTransactions = await db.transaction.findMany({
-        where: projectId && projectId !== 'all' ? { projectId } : {},
+        where: {
+          project: {
+            status: { not: 'Completed' }
+          }
+        },
         take: 10,
         orderBy: { createdAt: 'desc' },
         include: { project: true },
@@ -143,11 +146,15 @@ export async function GET(request: NextRequest) {
       recentTransactions = [];
     }
 
-    // Activity logs
+    // Activity logs (from active projects only)
     let activityLogs: any[] = [];
     try {
       activityLogs = await db.activityLog.findMany({
-        where: projectId && projectId !== 'all' ? { projectId } : {},
+        where: {
+          project: {
+            status: { not: 'Completed' }
+          }
+        },
         take: 20,
         orderBy: { createdAt: 'desc' },
         include: { 
@@ -165,7 +172,7 @@ export async function GET(request: NextRequest) {
       activityLogs = [];
     }
 
-    // Treemap data
+    // Treemap data (active projects only)
     const treemapData = projectStats
       .filter(p => p.expense > 0 || p.income > 0)
       .map(p => ({
@@ -178,11 +185,10 @@ export async function GET(request: NextRequest) {
         income: p.income,
       }));
 
-    // Project daily data - cumulative profit per project
+    // Project daily data - cumulative profit per project (active only)
     const projectDailyData: { projectId: string; projectName: string; date: string; cumulativeProfit: number; dailyProfit: number }[] = [];
     
-    // Include all projects that have transactions
-    const projectsWithTransactions = projects.filter(p => 
+    const projectsWithTransactions = activeProjects.filter(p => 
       p.transactions && p.transactions.length > 0
     );
     
@@ -231,7 +237,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       stats: {
-        totalProjects: projects.length,
+        totalProjects: totalProjectsCount,
+        activeProjects: activeProjectsCount,
+        completedProjects: completedProjectsCount,
         totalContractValue,
         totalBudget,
         totalExpense,
@@ -240,13 +248,17 @@ export async function GET(request: NextRequest) {
         profitMargin: totalBudget > 0 ? (((totalIncome - totalExpense) / totalBudget) * 100) : 0,
       },
       projects: projectStats,
+      allProjects: allProjects.map(p => ({
+        id: p.id,
+        name: p.name,
+        status: p.status,
+      })),
       dailyData,
       statusDistribution,
       recentTransactions,
       activityLogs,
       treemapData,
       projectDailyData,
-      selectedProject: projectId,
     });
   } catch (error) {
     console.error('Dashboard error:', error);

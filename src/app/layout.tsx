@@ -3,7 +3,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: "NEON ERP - Construction Management System",
+  title: "Dashboard Project - Construction Management System",
   description: "Professional Construction ERP System for project management, accounting, and budget planning.",
   keywords: ["ERP", "Construction", "Project Management", "Accounting", "Budget"],
   authors: [{ name: "NEON ERP Team" }],

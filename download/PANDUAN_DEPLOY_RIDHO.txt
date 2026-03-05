@@ -1,0 +1,118 @@
+# ============================================
+# PANDUAN LENGKAP DEPLOY NEON ERP
+# Email: ridhoadnan@gmail.com
+# ============================================
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 1: BUAT AKUN GITHUB (Jika Belum Punya)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Buka https://github.com
+2. Klik "Sign up"
+3. Daftar dengan email: ridhoadnan@gmail.com
+4. Pilih username (misal: ridhoadnan)
+5. Verifikasi email
+6. Pilih plan FREE
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 2: BUAT REPOSITORY BARU DI GITHUB
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Login ke GitHub
+2. Klik tombol "+" di pojok kanan atas
+3. Pilih "New repository"
+4. Isi:
+   - Repository name: neon-erp
+   - Description: Construction ERP System
+   - Public (agar bisa deploy gratis)
+   - JANGAN centang apapun
+5. Klik "Create repository"
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 3: BUAT DATABASE GRATIS DI SUPABASE
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Buka https://supabase.com
+2. Klik "Start your project"
+3. Pilih "Sign up with GitHub"
+4. Authorize Supabase
+5. Buat Organization baru (nama: MyCompany)
+6. Klik "New Project":
+   - Name: neon-erp-db
+   - Database Password: (BUAT PASSWORD KUAT!)
+   - Region: Southeast Asia (Singapore)
+   - Plan: FREE
+7. Klik "Create new project"
+8. TUNGGU 2-3 MENIT
+
+9. Setelah siap, pergi ke:
+   Settings (icon gear) → Database → Connection string
+
+10. Copy "URI" dan GANTI [YOUR-PASSWORD] dengan password Anda:
+    postgresql://postgres.xxxxx:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+
+    SIMPAN INI! Ini adalah DATABASE_URL Anda
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 4: PUSH KODE KE GITHUB
+═══════════════════════════════════════════════════════════════════════════════
+
+Setelah membuat repository di GitHub, jalankan perintah ini:
+
+# Ganti USERNAME dengan username GitHub Anda
+git remote add origin https://github.com/USERNAME/neon-erp.git
+git branch -M main
+git push -u origin main
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 5: DEPLOY KE VERCEL
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Buka https://vercel.com
+2. Klik "Sign Up"
+3. Pilih "Continue with GitHub"
+4. Setelah login, klik "Add New..." → "Project"
+5. Pilih repository "neon-erp"
+6. Klik "Import"
+7. Klik "Environment Variables"
+8. Tambahkan:
+   
+   Name:  DATABASE_URL
+   Value: (paste connection string dari Supabase)
+   
+9. Klik "Deploy"
+10. Tunggu 3-5 menit
+11. Selesai! 🎉
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 6: LOGIN KE APLIKASI
+═══════════════════════════════════════════════════════════════════════════════
+
+Setelah deploy sukses, buka website Anda:
+https://neon-erp.vercel.app
+
+DEFAULT LOGIN:
+- Email: admin@neonerp.com
+- Password: admin123
+
+PIN SETTINGS: 123456
+
+⚠️ PENTING: Segera ubah password dan PIN setelah login!
+
+═══════════════════════════════════════════════════════════════════════════════
+ CATATAN PENTING
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Database akan KOSONG saat pertama deploy
+2. Anda perlu input ulang data perusahaan di Settings
+3. Upload logo perusahaan di Settings → Company Profile
+4. Ubah PIN Settings dari 123456 ke PIN baru
+
+═══════════════════════════════════════════════════════════════════════════════
+ BUTUH BANTUAN?
+═══════════════════════════════════════════════════════════════════════════════
+
+Jika ada error, berikan:
+1. Screenshot error
+2. Pesan error dari browser console (F12 → Console)
+3. Link repository GitHub Anda

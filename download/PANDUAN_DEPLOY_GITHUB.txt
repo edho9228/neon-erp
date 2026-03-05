@@ -1,0 +1,179 @@
+================================================================================
+                    PANDUAN DEPLOY NEON ERP KE VERCEL
+================================================================================
+
+Username GitHub: ppmalkanza
+Email: ridhoadnan@gmail.com
+
+================================================================================
+LANGKAH 1: BUAT GITHUB PERSONAL ACCESS TOKEN (PAT)
+================================================================================
+
+Karena GitHub sudah tidak mendukung login dengan password, Anda perlu membuat
+Personal Access Token (PAT) untuk push kode.
+
+1. Buka: https://github.com/settings/tokens
+2. Klik "Generate new token" > "Generate new token (classic)"
+3. Isi form:
+   - Note: "NEON ERP Deploy"
+   - Expiration: "No expiration" atau pilih yang panjang
+   - Select scopes: Centang "repo" (semua sub-item repo)
+4. Klik "Generate token"
+5. **SALIN TOKEN** - Token hanya ditampilkan sekali!
+
+================================================================================
+LANGKAH 2: BUAT REPOSITORY DI GITHUB
+================================================================================
+
+1. Buka: https://github.com/new
+2. Isi form:
+   - Repository name: neon-erp
+   - Description: Construction Management System
+   - Visibility: Public (untuk Vercel gratis) atau Private
+   - JANGAN centang "Add a README file"
+   - JANGAN centang "Add .gitignore"
+   - JANGAN pilih license
+3. Klik "Create repository"
+
+================================================================================
+LANGKAH 3: PUSH KE GITHUB
+================================================================================
+
+Setelah repository dibuat, jalankan perintah berikut di terminal:
+
+# Add remote GitHub
+git remote add origin https://github.com/ppmalkanza/neon-erp.git
+
+# Push ke GitHub (akan diminta username dan token)
+git push -u origin master
+
+# Saat diminta:
+# - Username: ppmalkanza
+# - Password: [PASTE PERSONAL ACCESS TOKEN ANDA]
+
+ATAU jika sudah ada remote:
+git remote set-url origin https://github.com/ppmalkanza/neon-erp.git
+git push -u origin master
+
+================================================================================
+LANGKAH 4: BUAT DATABASE GRATIS DI SUPABASE
+================================================================================
+
+1. Buka: https://supabase.com
+2. Klik "Start your project"
+3. Sign up/Login dengan GitHub
+4. Klik "New Project"
+5. Isi form:
+   - Name: neon-erp-db
+   - Database Password: [BUAT PASSWORD KUAT]
+   - Region: Singapore (terdekat untuk Indonesia)
+6. Klik "Create new project"
+7. Tunggu sekitar 2 menit hingga project siap
+8. Pilih menu "Settings" > "Database"
+9. Scroll ke "Connection string" > pilih "URI"
+10. Copy connection string, format:
+    postgresql://postgres:[YOUR-PASSWORD]@db.xxxxx.supabase.co:5432/postgres
+
+11. Ganti [YOUR-PASSWORD] dengan password yang Anda buat tadi
+
+================================================================================
+LANGKAH 5: DEPLOY KE VERCEL
+================================================================================
+
+1. Buka: https://vercel.com
+2. Klik "Sign Up" > pilih "Continue with GitHub"
+3. Authorize Vercel untuk akses GitHub
+4. Klik "Add New..." > "Project"
+5. Import repository "neon-erp"
+6. Konfigurasi:
+   - Framework Preset: Next.js (auto-detect)
+   - Root Directory: ./
+   - Build Command: npm run build (default)
+   - Output Directory: .next (default)
+
+7. Klik "Environment Variables" dan tambahkan:
+   - Name: DATABASE_URL
+   - Value: [PASTE CONNECTION STRING SUPABASE]
+
+8. Klik "Deploy"
+9. Tunggu sekitar 3-5 menit untuk proses build
+
+================================================================================
+LANGKAH 6: SETUP DATABASE DI VERCEL
+================================================================================
+
+Setelah deploy selesai:
+
+1. Buka project di Vercel dashboard
+2. Pilih tab "Settings" > "Environment Variables"
+3. Pastikan DATABASE_URL sudah benar
+
+4. Jalankan migrasi database:
+   - Buka terminal lokal
+   - Set DATABASE_URL ke production database:
+     export DATABASE_URL="postgresql://postgres:PASSWORD@db.xxxxx.supabase.co:5432/postgres"
+   
+   - Jalankan:
+     npx prisma db push
+
+   - Atau gunakan Vercel CLI:
+     npm i -g vercel
+     vercel login
+     vercel link
+     vercel env pull .env
+     npx prisma db push
+
+================================================================================
+LANGKAH 7: SEED DATA AWAL
+================================================================================
+
+Untuk mengisi data awal (user admin, company, dll):
+
+1. Buka browser, akses:
+   https://[NAMA-PROJECT].vercel.app/api/seed
+
+2. Ini akan membuat:
+   - User admin: admin@neon.com / admin123
+   - Data company
+   - Master items contoh
+
+================================================================================
+SELESAI!
+================================================================================
+
+Aplikasi NEON ERP Anda sekarang sudah online!
+
+URL: https://[nama-project].vercel.app
+
+Login:
+- Email: admin@neon.com
+- Password: admin123
+- PIN Settings: 123456
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+1. Error: "Prisma Client could not be generated"
+   - Pastikan DATABASE_URL sudah benar
+   - Jalankan: npx prisma generate
+
+2. Error: "Can't reach database server"
+   - Cek connection string Supabase
+   - Pastikan password benar (URL encoded jika ada special chars)
+
+3. Build timeout di Vercel
+   - Naikkan memory di Vercel settings
+   - Atau gunakan prisma migrate deploy
+
+4. Database migration error
+   - Reset database di Supabase
+   - Jalankan ulang npx prisma db push
+
+================================================================================
+KONTAK & SUPPORT
+================================================================================
+
+Repository: https://github.com/ppmalkanza/neon-erp
+
+================================================================================

@@ -1,0 +1,209 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    🚀 PANDUAN DEPLOY NEON ERP GRATIS                        ║
+║                          Langkah Demi Langkah                               ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 1: BUAT AKUN GITHUB
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Buka browser, kunjungi: https://github.com
+2. Klik "Sign up" di pojok kanan atas
+3. Isi form pendaftaran:
+   - Email: (email Anda)
+   - Password: (buat password kuat)
+   - Username: (pilih username, misal: username-anda)
+4. Klik "Create account"
+5. Verifikasi email Anda
+6. Pilih plan "Free" (gratis)
+7. Selesai! Anda punya akun GitHub
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 2: BUAT DATABASE GRATIS DI SUPABASE
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Buka browser, kunjungi: https://supabase.com
+2. Klik "Start your project"
+3. Pilih "Sign up with GitHub"
+4. Authorize Supabase untuk mengakses GitHub Anda
+5. Setelah login, klik "New Organization"
+   - Name: (nama organisasi, misal: my-company)
+   - Klik "Create organization"
+6. Klik "New Project"
+   - Name: neon-erp-db
+   - Database Password: (buat password KUAT, simpan baik-baik!)
+   - Region: Southeast Asia (Singapore)
+   - Plan: Free
+7. Klik "Create new project"
+8. TUNGGU ±2 MENIT sampai project selesai dibuat
+
+9. Setelah project ready, pergi ke menu kiri:
+   Settings (icon gear) → Database → Connection string
+   
+10. Copy "URI" connection string, format seperti ini:
+    postgresql://postgres.XXXXX:PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+    
+    PENTING: Ganti [YOUR-PASSWORD] dengan password yang Anda buat tadi!
+
+11. SIMPAN connection string ini, akan digunakan nanti sebagai DATABASE_URL
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 3: BUAT REPOSITORY DI GITHUB
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Login ke GitHub: https://github.com
+2. Klik tombol "+" di pojok kanan atas → "New repository"
+3. Isi form:
+   - Repository name: neon-erp
+   - Description: Construction ERP System
+   - Pilih: Public (atau Private jika ingin)
+   - JANGAN centang "Add a README file"
+   - JANGAN centang "Add .gitignore"
+   - License: None
+4. Klik "Create repository"
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 4: PUSH KODE KE GITHUB (Dari Server Ini)
+═══════════════════════════════════════════════════════════════════════════════
+
+Saya akan membantu push kode ke GitHub. Pertama, berikan saya:
+- Username GitHub Anda
+- Nama repository yang sudah dibuat
+
+Atau Anda bisa jalankan perintah ini di komputer lokal:
+
+# Inisialisasi git (jika belum)
+git init
+
+# Tambahkan semua file
+git add .
+
+# Commit
+git commit -m "Initial commit - NEON ERP System"
+
+# Tambahkan remote repository
+git remote add origin https://github.com/USERNAME-ANDA/neon-erp.git
+
+# Push ke GitHub
+git branch -M main
+git push -u origin main
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 5: DEPLOY KE VERCEL
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Buka browser, kunjungi: https://vercel.com
+2. Klik "Sign Up"
+3. Pilih "Continue with GitHub"
+4. Authorize Vercel untuk mengakses GitHub
+5. Setelah login, klik "Add New..." → "Project"
+6. Pilih repository "neon-erp" dari daftar
+7. Klik "Import"
+8. Konfigurasi project:
+   - Framework Preset: Next.js (otomatis terdeteksi)
+   - Root Directory: ./
+   
+9. KLIK "Environment Variables" dan tambahkan:
+   
+   Name:  DATABASE_URL
+   Value: (paste connection string dari Supabase)
+   
+   Contoh:
+   postgresql://postgres.abc123:MyP@ssw0rd@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
+
+10. Klik "Deploy"
+11. TUNGGU ±3-5 MENIT sampai deploy selesai
+12. Jika sukses, akan muncul "Congratulations! 🎉"
+13. Klik "Continue to Dashboard"
+14. Klik "Visit" untuk melihat website Anda
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 6: MIGRASI DATABASE
+═══════════════════════════════════════════════════════════════════════════════
+
+Setelah deploy pertama kali, database masih kosong. Anda perlu migrasi:
+
+OPSI A: Menggunakan Vercel CLI (Recommended)
+-------------------------------------------
+1. Install Vercel CLI di komputer lokal:
+   npm install -g vercel
+
+2. Login ke Vercel:
+   vercel login
+
+3. Link project:
+   vercel link
+
+4. Pull environment variables:
+   vercel env pull .env.production
+
+5. Jalankan migrasi:
+   npx prisma migrate deploy
+
+OPSI B: Menggunakan Prisma Studio Online
+----------------------------------------
+1. Di Vercel dashboard, pergi ke Storage
+2. Atau gunakan Supabase SQL Editor untuk menjalankan schema
+
+═══════════════════════════════════════════════════════════════════════════════
+ LANGKAH 7: LOGIN KE APLIKASI
+═══════════════════════════════════════════════════════════════════════════════
+
+Setelah database siap, buka website Anda:
+https://neon-erp.vercel.app (atau domain yang diberikan Vercel)
+
+Default Login:
+- Email: admin@neonerp.com
+- Password: admin123
+
+PIN Settings Default:
+- PIN: 123456
+
+PENTING: Segera ubah password dan PIN setelah login pertama!
+
+═══════════════════════════════════════════════════════════════════════════════
+ TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════════════
+
+❌ Error: "Database connection failed"
+   → Cek DATABASE_URL di Vercel environment variables
+   → Pastikan password benar
+   → Pastikan tidak ada spasi di awal/akhir
+
+❌ Error: "Prisma Client not initialized"
+   → Di Vercel dashboard, trigger redeploy
+
+❌ Error: "Build failed"
+   → Cek build logs di Vercel
+   → Pastikan semua dependencies terinstall
+
+❌ Website blank/putih
+   → Buka browser console (F12)
+   → Cek error messages
+   → Cek jika ada environment variable yang kurang
+
+═══════════════════════════════════════════════════════════════════════════════
+ LIMITS GRATIS
+═══════════════════════════════════════════════════════════════════════════════
+
+Vercel Free:
+- 100GB bandwidth/bulan
+- Unlimited deployments
+- 100 builds/hari
+
+Supabase Free:
+- 500MB database storage
+- 1GB file storage
+- 50,000 monthly active users
+
+═══════════════════════════════════════════════════════════════════════════════
+ NEXT STEPS
+═══════════════════════════════════════════════════════════════════════════════
+
+Jika sudah siap dengan akun GitHub dan Supabase, berikan saya:
+1. Username GitHub Anda
+2. Connection string Supabase (dengan password terisi)
+
+Saya akan membantu push kode dan setup environment variables!
+
+═══════════════════════════════════════════════════════════════════════════════

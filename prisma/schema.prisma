@@ -1,0 +1,361 @@
+// This is your Prisma schema file,
+// DASHBOARD PROJECT - Construction Management System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTHENTICATION ====================
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  role         String   @default("staff") // admin, manager, staff
+  avatar       String?
+  isActive     Boolean  @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  projects     Project[]
+  transactions Transaction[]
+  logs         ActivityLog[]
+  sessions     Session[]
+  chatMessages ChatMessage[]
+}
+
+// ==================== COMPANY DATA ====================
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  phone       String
+  email       String?
+  logo        String?
+  bankName    String?
+  bankAccount String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==================== CLIENT DATABASE ====================
+model Client {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String   // Nama Perusahaan/Client
+  contactPerson   String   // Nama Contact Person
+  phone           String   // Telepon
+  email           String?  // Email
+  address         String?  // Alamat
+  notes           String?  // Catatan tambahan
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  projects        Project[]
+}
+
+// ==================== MASTER ITEMS ====================
+model MasterItem {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  category    String   // Civil, MEP, Interior, General
+  unit        String
+  price       Float
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  rabItems      RABItem[]
+  poItems       PurchaseOrderItem[]
+}
+
+// ==================== PROJECT/RAB ====================
+model Project {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  
+  // Project Info
+  name           String   // Nama Project
+  
+  // Client Relation
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
+  
+  // Status: Draft -> Negotiation -> Deal -> InProgress -> Completed -> Cancelled/Lost
+  status         String   @default("Negotiation")
+  
+  // Dates - only fill when Deal/InProgress
+  startDate      DateTime?
+  endDate        DateTime?
+  
+  // Progress - only for InProgress
+  progress       Float    @default(0) // 0-100 percentage
+  progressNote   String?
+  
+  // Financial - only fill when Deal/InProgress
+  contractValue  Float    @default(0) // Nilai Kontrak (dari RAB atau negosiasi)
+  modalKerja     Float    @default(0) // Rencana Modal Kerja
+  
+  // Responsible / Penanggung Jawab
+  responsible    String?  // Nama Penanggung Jawab Project
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id])
+  rabItems       RABItem[]
+  transactions   Transaction[]
+  tenders        Tender[]
+  progressHistory ProgressHistory[]
+  monthlyReports MonthlyReport[]
+  budgetPlans    BudgetPlan[]
+}
+
+// ==================== RAB (Rencana Anggaran Biaya) ====================
+model RABItem {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        MasterItem @relation(fields: [itemId], references: [id])
+  description String?
+  quantity    Float
+  unitPrice   Float
+  totalPrice  Float
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==================== TRANSACTIONS (Accounting) ====================
+model Transaction {
+  id          String   @id @default(cuid())
+  projectId   String?  // Optional - null for internal company transactions
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  // Source: "Project" atau "Internal"
+  source      String   @default("Project") // Project, Internal
+  
+  type        String   // Income, Expense
+  category    String   // Material, Labor, Overhead, Payment, Other, ATK, Gaji, Listrik, Sewa, Transport, Administrasi, Lainnya
+  description String
+  amount      Float
+  date        DateTime
+  receipt     String?  // URL to receipt image
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==================== TENDER ====================
+model Tender {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  name        String
+  value       Float
+  status      String   @default("Submitted") // Submitted, Negotiation, Won, Lost
+  submitDate  DateTime
+  resultDate  DateTime?
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==================== ASSET / DATA ASET ====================
+model Asset {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  category        String   // Alat Kerja, Komputer, Kendaraan, Perabot, Lainnya
+  brand           String?
+  model           String?
+  serialNumber    String?
+  purchaseDate    DateTime?
+  purchasePrice   Float    @default(0)
+  currentValue    Float    @default(0)  // Nilai saat ini (setelah penyusutan)
+  condition       String   @default("Baik") // Baik, Cukup, Rusak, Tidak Terpakai
+  location        String?
+  assignedTo      String?  // Nama pengguna/pic
+  notes           String?
+  photo           String?  // URL to asset photo
+  isActive        Boolean  @default(true)
+  
+  // Peminjaman Status
+  loanStatus      String   @default("Tersedia") // Tersedia, Dipinjam
+  borrowerName    String?  // Nama peminjam
+  loanDate        DateTime? // Tanggal pinjam
+  expectedReturnDate DateTime? // Tanggal rencana pengembalian
+  actualReturnDate DateTime? // Tanggal pengembalian aktual
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  loans           AssetLoan[]
+}
+
+// ==================== ASSET LOAN HISTORY ====================
+model AssetLoan {
+  id              String   @id @default(cuid())
+  assetId         String
+  asset           Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  
+  borrowerName    String   // Nama peminjam
+  borrowerPhone   String?  // No. HP peminjam
+  borrowerAddress String?  // Alamat peminjam
+  loanDate        DateTime // Tanggal pinjam
+  expectedReturnDate DateTime // Tanggal rencana pengembalian
+  actualReturnDate DateTime? // Tanggal pengembalian aktual
+  status          String   @default("Dipinjam") // Dipinjam, Dikembalikan
+  notes           String?  // Catatan peminjaman
+  returnNotes     String?  // Catatan pengembalian
+  returnedCondition String? // Kondisi saat dikembalikan
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ==================== PURCHASE ORDER ====================
+model PurchaseOrder {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  projectId   String?
+  supplier    String
+  status      String   @default("Draft") // Draft, Submitted, Received, Cancelled
+  totalAmount Float    @default(0)
+  orderDate   DateTime @default(now())
+  receiveDate DateTime?
+  notes       String?
+  
+  items       PurchaseOrderItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PurchaseOrderItem {
+  id          String   @id @default(cuid())
+  poId        String
+  po          PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        MasterItem @relation(fields: [itemId], references: [id])
+  quantity    Float
+  unitPrice   Float
+  totalPrice  Float
+}
+
+// ==================== PROGRESS HISTORY ====================
+model ProgressHistory {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  progress    Float
+  note        String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+// ==================== MONTHLY REPORT ====================
+model MonthlyReport {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  year        Int
+  month       Int
+  
+  budget      Float    @default(0)  // RAB Total
+  actual      Float    @default(0)  // Actual Cost
+  income      Float    @default(0)  // Income Received
+  profit      Float    @default(0)  // profit/loss
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([projectId, year, month])
+}
+
+// ==================== BUDGET PLAN (Modal Kerja) ====================
+model BudgetPlan {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  category    String   // Material, Labor, Equipment, Overhead, Subcon
+  description String
+  planned     Float    @default(0)  // Rencana Anggaran
+  actual      Float    @default(0)  // Realisasi
+  variance    Float    @default(0)  // Selisih
+  
+  month       Int      // 1-12
+  year        Int
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([projectId, category, month, year])
+}
+
+// ==================== ACTIVITY LOG ====================
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  module      String
+  action      String
+  details     String?
+  projectId   String?
+  
+  createdAt   DateTime @default(now())
+}
+
+// ==================== CHAT MESSAGE ====================
+model ChatMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  message     String
+  recipientId String?  // null for broadcast to all, specific user ID for direct message
+  
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// ==================== SESSION (for Auth) ====================
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  token       String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+// ==================== SYSTEM SETTINGS ====================
+model SystemSettings {
+  id          String   @id @default(cuid())
+  settingsPin String?  // Hashed PIN for settings access
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

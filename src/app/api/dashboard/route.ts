@@ -5,9 +5,10 @@ import { getCurrentUser } from '@/lib/auth';
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    console.log('Dashboard API - User authenticated:', !!user, user ? user.email : 'No user');
+    
+    // Allow access even without authentication (for visitor mode)
+    // But still check for user for logging purposes
 
     // Get ALL projects for counts
     let allProjects: any[] = [];

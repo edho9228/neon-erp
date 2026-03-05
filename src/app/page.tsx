@@ -2333,106 +2333,50 @@ export default function NEONERP() {
         </div>
       </header>
 
-      {/* 📊 Live Candlestick Cheatsheet - Below Header */}
+      {/* 📊 LIVE Report Marquee */}
       <div className="fixed top-16 left-0 right-0 h-8 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 z-40">
-        {/* Header Row */}
         <div className="flex items-center h-full px-4">
-          <div className="flex items-center gap-2 px-3 bg-gradient-to-r from-cyan-600/30 to-purple-600/30 h-6 rounded border border-cyan-500/30">
+          {/* Label */}
+          <div className="flex items-center gap-2 px-3 bg-gradient-to-r from-cyan-600/30 to-green-600/30 h-6 rounded border border-cyan-500/30 shrink-0">
             <span className="text-sm">📊</span>
-            <span className="text-xs font-bold text-cyan-400">LIVE CANDLESTICK CHEATSHEET</span>
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+            <span className="text-xs font-bold text-green-400">LIVE Report Project</span>
           </div>
+          
+          {/* Marquee Content */}
           <div className="flex-1 overflow-hidden ml-4">
-            {(() => {
-              // Filter projects based on selection
-              const displayProjects = selectedProject && selectedProject !== 'all'
-                ? projectStats.filter(p => p.id === selectedProject)
-                : projectStats;
-              
-              if (!displayProjects || displayProjects.length === 0) {
-                return <span className="text-xs text-slate-500">Belum ada data project</span>;
-              }
-              
-              return (
-                <div className="animate-marquee whitespace-nowrap flex items-center">
-                  {[...displayProjects, ...displayProjects].map((project, idx) => {
-                    const profit = project.income - project.expense;
-                    const isProfit = profit >= 0;
-                    const profitPercent = project.budget > 0 ? ((profit / project.budget) * 100) : 0;
-                    
-                    // Calculate candlestick values
-                    const open = project.budget || project.contractValue || 0;
-                    const close = project.income || 0;
-                    const high = Math.max(open, close, project.income + (project.budget * 0.1));
-                    const low = Math.min(open, close, project.income - (project.expense * 0.1));
-                    const candleBody = Math.abs(close - open);
-                    const bodyTop = Math.max(open, close);
-                    const range = high - low || 1;
-                    
-                    // Daily change simulation (based on actual data)
-                    const dailyChange = project.expense > 0 ? ((project.income - project.expense) / project.expense * 10) : 0;
-                    const dailyChangePercent = dailyChange.toFixed(2);
-                    
-                    // Color scheme based on profit/loss
-                    const candleColor = isProfit ? 'bg-green-500' : 'bg-red-500';
-                    const textColor = isProfit ? 'text-green-400' : 'text-red-400';
-                    const borderColor = isProfit ? 'border-green-500/50' : 'border-red-500/50';
-                    const bgColor = isProfit ? 'bg-green-500/5' : 'bg-red-500/5';
-                    
-                    return (
-                      <div 
-                        key={`${project.id}-${idx}`} 
-                        className={`inline-flex items-center gap-3 mx-3 px-3 py-1 rounded border ${borderColor} ${bgColor} transition-all hover:scale-105`}
-                      >
-                        {/* Mini Candlestick Chart */}
-                        <div className="relative w-8 h-6 flex items-center justify-center">
-                          {/* Wick line */}
-                          <div className={`absolute w-0.5 h-full ${isProfit ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                          {/* Body */}
-                          <div 
-                            className={`absolute w-4 ${candleColor} rounded-sm`}
-                            style={{
-                              height: `${Math.min(80, (candleBody / range) * 100)}%`,
-                              top: `${100 - ((bodyTop - low) / range) * 100}%`,
-                            }}
-                          ></div>
-                        </div>
-                        
-                        {/* Project Info */}
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-200 truncate max-w-[120px]" title={project.name}>
-                            {project.name}
-                          </span>
-                          <span className={`text-[10px] font-mono ${textColor}`}>
-                            {isProfit ? '+' : ''}{formatCurrency(profit)}
-                          </span>
-                        </div>
-                        
-                        {/* Price/Change Info */}
-                        <div className="flex flex-col items-end">
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {profitPercent.toFixed(1)}%
-                          </span>
-                          <span className={`text-[10px] font-bold ${textColor}`}>
-                            {isProfit ? '▲' : '▼'} {Math.abs(parseFloat(dailyChangePercent))}%
-                          </span>
-                        </div>
-                        
-                        {/* Status Badge */}
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                          project.status === 'InProgress' ? 'bg-blue-500/30 text-blue-300' :
-                          project.status === 'Completed' ? 'bg-green-500/30 text-green-300' :
-                          project.status === 'Deal' ? 'bg-purple-500/30 text-purple-300' :
-                          'bg-slate-500/30 text-slate-300'
-                        }`}>
-                          {project.status}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+            {projectStats && projectStats.length > 0 ? (
+              <div className="animate-marquee whitespace-nowrap flex items-center">
+                {[...projectStats, ...projectStats].map((project, idx) => {
+                  const profit = project.income - project.expense;
+                  const isProfit = profit >= 0;
+                  const profitPercent = project.budget > 0 ? ((profit / project.budget) * 100) : 0;
+                  
+                  return (
+                    <span key={`${project.id}-${idx}`} className="inline-flex items-center gap-2 mx-4 text-xs">
+                      <span className="font-medium text-slate-200">{project.name}</span>
+                      <span className={`font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                        {isProfit ? '+' : ''}{formatCurrency(profit)}
+                      </span>
+                      <span className={`${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                        {isProfit ? '▲' : '▼'} {Math.abs(profitPercent).toFixed(1)}%
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                        project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
+                        project.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
+                        project.status === 'Deal' ? 'bg-purple-500/20 text-purple-400' :
+                        'bg-slate-500/20 text-slate-400'
+                      }`}>
+                        {project.status}
+                      </span>
+                      <span className="text-slate-600">|</span>
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <span className="text-xs text-slate-500">Belum ada data project</span>
+            )}
           </div>
         </div>
       </div>
@@ -2768,39 +2712,31 @@ export default function NEONERP() {
                 </Card>
               </div>
 
-              {/* 📊 LIVE CANDLESTICK CHEATSHEET - Crypto Style Chart */}
+              {/* Project Profit/Loss Chart - Semua Project */}
               <Card className="glass-card overflow-hidden">
                 <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700">
                   <div className="flex items-center justify-between px-6 py-3">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">📊</span>
+                        <TrendingUp className="w-5 h-5 text-green-400" />
                         <div>
-                          <h3 className="text-white font-bold text-lg">LIVE CANDLESTICK CHEATSHEET</h3>
-                          <p className="text-xs text-slate-400">Real-time Project Financial Performance</p>
+                          <h3 className="text-white font-bold text-lg">Project Profit/Loss Chart</h3>
+                          <p className="text-xs text-slate-400">Semua Project - Real Time Financial Performance</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-green-400 font-medium">LIVE</span>
+                        <span className="text-xs text-green-400 font-medium">REAL-TIME</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-6 text-xs">
                       <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-center">
-                          <div className="w-1 h-3 bg-green-500 rounded-sm"></div>
-                          <div className="w-3 h-2 bg-green-500 rounded-sm mt-0.5"></div>
-                          <div className="w-1 h-3 bg-green-500 rounded-sm mt-0.5"></div>
-                        </div>
-                        <span className="text-slate-400">Bullish (Profit)</span>
+                        <span className="w-3 h-3 rounded bg-green-500"></span>
+                        <span className="text-slate-400">Profit</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-center">
-                          <div className="w-1 h-3 bg-red-500 rounded-sm"></div>
-                          <div className="w-3 h-2 bg-red-500 rounded-sm mt-0.5"></div>
-                          <div className="w-1 h-3 bg-red-500 rounded-sm mt-0.5"></div>
-                        </div>
-                        <span className="text-slate-400">Bearish (Loss)</span>
+                        <span className="w-3 h-3 rounded bg-red-500"></span>
+                        <span className="text-slate-400">Loss</span>
                       </div>
                     </div>
                   </div>
@@ -2808,36 +2744,25 @@ export default function NEONERP() {
                 
                 <CardContent className="p-0">
                   {(() => {
-                    // Filter projects based on selection
-                    const displayProjects = selectedProject && selectedProject !== 'all'
-                      ? projectStats.filter(p => p.id === selectedProject)
-                      : projectStats;
+                    // Show ALL projects (not filtered)
+                    const allProjects = projectStats;
                     
                     // Filter projects with finance data
-                    const projectsWithFinance = displayProjects.filter(p => 
-                      p.income > 0 || p.expense > 0
+                    const projectsWithFinance = allProjects.filter(p => 
+                      p.income > 0 || p.expense > 0 || p.budget > 0
                     );
                     
                     // Calculate totals
                     const totalProfit = projectsWithFinance.filter(p => p.profit >= 0).reduce((sum, p) => sum + p.profit, 0);
                     const totalLoss = Math.abs(projectsWithFinance.filter(p => p.profit < 0).reduce((sum, p) => sum + p.profit, 0));
                     const netPL = totalProfit - totalLoss;
-                    const maxValue = Math.max(totalProfit, totalLoss, 1);
-                    
-                    // Get daily data for chart
-                    const chartData = dailyData.slice(-14); // Last 14 days
-                    
-                    // Calculate min/max for chart scaling
-                    const chartValues = chartData.map(d => d.cumulativeProfit);
-                    const minVal = Math.min(...chartValues, 0);
-                    const maxVal = Math.max(...chartValues);
-                    const range = maxVal - minVal || 1;
+                    const maxAbsValue = Math.max(Math.abs(totalProfit), Math.abs(totalLoss), 1);
                     
                     return (
                       <>
-                        {/* Price Ticker Bar */}
+                        {/* Summary Stats Bar */}
                         <div className="flex items-center gap-4 px-6 py-3 bg-slate-800/50 border-b border-slate-700/50 overflow-x-auto">
-                          {/* Net P/L Card */}
+                          {/* Net P/L */}
                           <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border shrink-0 ${
                             netPL >= 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
                           }`}>
@@ -2845,187 +2770,182 @@ export default function NEONERP() {
                             <span className={`text-lg font-bold font-mono ${netPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                               {netPL >= 0 ? '+' : ''}{formatCurrency(netPL)}
                             </span>
-                            <span className={`text-xs ${netPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {netPL >= 0 ? '▲' : '▼'}
-                            </span>
                           </div>
                           
-                          {/* Profit Card */}
+                          {/* Profit */}
                           <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-green-500/30 bg-green-500/5 shrink-0">
-                            <span className="text-xs text-slate-400">Total Profit</span>
+                            <span className="text-xs text-slate-400">Profit</span>
                             <span className="text-lg font-bold text-green-400 font-mono">{formatCurrency(totalProfit)}</span>
                             <span className="text-xs text-green-400">▲ {projectsWithFinance.filter(p => p.profit >= 0).length}</span>
                           </div>
                           
-                          {/* Loss Card */}
+                          {/* Loss */}
                           <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/5 shrink-0">
-                            <span className="text-xs text-slate-400">Total Loss</span>
+                            <span className="text-xs text-slate-400">Loss</span>
                             <span className="text-lg font-bold text-red-400 font-mono">{formatCurrency(totalLoss)}</span>
                             <span className="text-xs text-red-400">▼ {projectsWithFinance.filter(p => p.profit < 0).length}</span>
                           </div>
                           
-                          {/* Projects Count */}
+                          {/* Total Projects */}
                           <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-cyan-500/30 bg-cyan-500/5 shrink-0">
-                            <span className="text-xs text-slate-400">Active Projects</span>
-                            <span className="text-lg font-bold text-cyan-400 font-mono">{projectsWithFinance.length}</span>
+                            <span className="text-xs text-slate-400">Total Projects</span>
+                            <span className="text-lg font-bold text-cyan-400 font-mono">{allProjects.length}</span>
                             <span className="text-xs text-cyan-400">
-                              {projectsWithFinance.length > 0 ? ((projectsWithFinance.filter(p => p.profit >= 0).length / projectsWithFinance.length) * 100).toFixed(0) : 0}% Win
+                              {projectsWithFinance.length > 0 ? ((projectsWithFinance.filter(p => p.profit >= 0).length / Math.max(1, projectsWithFinance.length)) * 100).toFixed(0) : 0}% Profit
                             </span>
                           </div>
                         </div>
                         
-                        {/* Main Chart Area */}
-                        {projectsWithFinance.length > 0 ? (
+                        {/* Chart Pattern - All Projects */}
+                        {allProjects.length > 0 ? (
                           <div className="p-6">
-                            {/* Candlestick Chart */}
+                            {/* Bar Chart Pattern */}
                             <div className="bg-slate-900/50 rounded-xl border border-slate-700/50 p-4 mb-6">
                               <div className="flex items-center justify-between mb-4">
-                                <span className="text-xs text-slate-400">Cumulative P/L - Last 14 Days</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-slate-500">Baseline: 0</span>
+                                <span className="text-xs text-slate-400">Profit Margin % - Semua Project</span>
+                                <div className="flex items-center gap-4 text-xs">
+                                  <span className="flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                    <span className="text-slate-400">Profit</span>
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                                    <span className="text-slate-400">Loss</span>
+                                  </span>
                                 </div>
                               </div>
                               
-                              {/* Chart Container */}
-                              <div className="relative h-48">
-                                {/* Y-Axis Labels */}
-                                <div className="absolute left-0 top-0 bottom-0 w-16 flex flex-col justify-between text-right pr-2">
-                                  <span className="text-[10px] text-slate-500 font-mono">{formatCurrency(maxVal)}</span>
-                                  <span className="text-[10px] text-slate-500 font-mono">{formatCurrency((maxVal + minVal) / 2)}</span>
-                                  <span className="text-[10px] text-slate-500 font-mono">{formatCurrency(minVal)}</span>
-                                </div>
-                                
-                                {/* Chart Grid & Candlesticks */}
-                                <div className="ml-16 h-full relative">
-                                  {/* Zero Line */}
-                                  <div 
-                                    className="absolute left-0 right-0 border-t border-dashed border-slate-600"
-                                    style={{ top: `${((maxVal) / range) * 100}%` }}
-                                  >
-                                    <span className="absolute right-0 -top-3 text-[9px] text-slate-500 px-1">0</span>
-                                  </div>
+                              {/* Chart Bars */}
+                              <div className="space-y-3">
+                                {allProjects.map((project, index) => {
+                                  const isProfit = project.profit >= 0;
+                                  const profitMarginPercent = project.budget > 0 
+                                    ? ((project.profit / project.budget) * 100) 
+                                    : project.income > 0 
+                                      ? ((project.profit / project.income) * 100) 
+                                      : 0;
+                                  const barWidth = Math.min(100, Math.abs(profitMarginPercent));
                                   
-                                  {/* Grid Lines */}
-                                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                                    {[0, 1, 2, 3].map(i => (
-                                      <div key={i} className="border-t border-slate-800/50"></div>
-                                    ))}
-                                  </div>
+                                  // Dynamic color based on margin
+                                  const getBarColor = () => {
+                                    if (profitMarginPercent >= 20) return 'from-green-500 to-emerald-400';
+                                    if (profitMarginPercent >= 10) return 'from-green-600 to-green-400';
+                                    if (profitMarginPercent >= 0) return 'from-green-700 to-green-500';
+                                    if (profitMarginPercent >= -10) return 'from-red-700 to-red-500';
+                                    if (profitMarginPercent >= -20) return 'from-red-600 to-red-400';
+                                    return 'from-red-500 to-rose-400';
+                                  };
                                   
-                                  {/* Candlesticks */}
-                                  <div className="absolute inset-0 flex items-end justify-around px-2">
-                                    {chartData.map((day, index) => {
-                                      const isPositive = day.profit >= 0;
-                                      const bodyHeight = Math.abs(day.profit) / (range || 1) * 100;
-                                      const bodyTop = day.profit >= 0 
-                                        ? ((maxVal - day.cumulativeProfit) / range) * 100 
-                                        : ((maxVal - (day.cumulativeProfit - day.profit)) / range) * 100;
-                                      
-                                      return (
-                                        <div key={index} className="flex flex-col items-center group relative" style={{ height: '100%' }}>
-                                          {/* Wick */}
-                                          <div 
-                                            className={`absolute w-0.5 ${isPositive ? 'bg-green-400' : 'bg-red-400'}`}
-                                            style={{
-                                              top: `${Math.max(0, ((maxVal - (day.cumulativeProfit + Math.abs(day.profit))) / range) * 100)}%`,
-                                              height: `${Math.min(100, bodyHeight + 5)}%`
-                                            }}
-                                          />
-                                          
-                                          {/* Body */}
-                                          <div 
-                                            className={`absolute w-4 rounded-sm transition-all duration-300 group-hover:w-6 ${
-                                              isPositive 
-                                                ? 'bg-gradient-to-t from-green-600 to-green-400 border border-green-300' 
-                                                : 'bg-gradient-to-t from-red-600 to-red-400 border border-red-300'
-                                            }`}
-                                            style={{
-                                              top: `${Math.min(95, Math.max(5, bodyTop))}%`,
-                                              height: `${Math.max(4, bodyHeight)}%`
-                                            }}
-                                          >
-                                            {/* Glow effect */}
-                                            <div className={`absolute inset-0 rounded-sm ${isPositive ? 'shadow-green-500/50' : 'shadow-red-500/50'} shadow-lg opacity-0 group-hover:opacity-100 transition-opacity`}></div>
+                                  return (
+                                    <div key={project.id} className="group hover:bg-slate-800/30 rounded-lg p-2 transition-all">
+                                      <div className="flex items-center gap-3">
+                                        {/* Project Name & Status */}
+                                        <div className="w-40 shrink-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-slate-200 truncate" title={project.name}>
+                                              {project.name}
+                                            </span>
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                                              project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
+                                              project.status === 'Deal' ? 'bg-purple-500/20 text-purple-400' :
+                                              project.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
+                                              'bg-slate-500/20 text-slate-400'
+                                            }`}>
+                                              {project.status}
+                                            </span>
                                           </div>
-                                          
-                                          {/* Tooltip on hover */}
-                                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-                                            <div className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs whitespace-nowrap shadow-xl">
-                                              <p className="text-slate-300 font-medium">{day.date}</p>
-                                              <p className={`${isPositive ? 'text-green-400' : 'text-red-400'} font-mono`}>
-                                                {isPositive ? '+' : ''}{formatCurrency(day.profit)}
-                                              </p>
-                                              <p className="text-slate-400 text-[10px]">
-                                                Cumulative: {formatCurrency(day.cumulativeProfit)}
-                                              </p>
+                                          <p className="text-[10px] text-slate-500 truncate">{project.code}</p>
+                                        </div>
+                                        
+                                        {/* Progress Bar */}
+                                        <div className="flex-1 relative">
+                                          <div className="h-6 bg-slate-800 rounded-full overflow-hidden relative">
+                                            {/* Background grid */}
+                                            <div className="absolute inset-0 flex">
+                                              {[0, 25, 50, 75].map(i => (
+                                                <div key={i} className="flex-1 border-r border-slate-700/50"></div>
+                                              ))}
                                             </div>
+                                            {/* Bar */}
+                                            <div 
+                                              className={`absolute top-0 h-full bg-gradient-to-r ${getBarColor()} transition-all duration-500 rounded-full`}
+                                              style={{ width: `${barWidth}%` }}
+                                            >
+                                              <div className="absolute inset-0 bg-white/10 rounded-full"></div>
+                                            </div>
+                                            {/* Center line */}
+                                            <div className="absolute left-1/2 top-0 w-px h-full bg-slate-600"></div>
                                           </div>
                                         </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {/* X-Axis Labels */}
-                              <div className="ml-16 flex justify-around mt-2">
-                                {chartData.filter((_, i) => i % 2 === 0).map((day, index) => (
-                                  <span key={index} className="text-[10px] text-slate-500">{day.date}</span>
-                                ))}
+                                        
+                                        {/* Percentage & Value */}
+                                        <div className="w-32 text-right shrink-0">
+                                          <span className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                                            {isProfit ? '+' : ''}{profitMarginPercent.toFixed(1)}%
+                                          </span>
+                                          <p className={`text-xs font-mono ${isProfit ? 'text-green-400/70' : 'text-red-400/70'}`}>
+                                            {isProfit ? '+' : ''}{formatCurrency(project.profit)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                             
-                            {/* Project Cards - Crypto Style */}
+                            {/* Project Cards Grid */}
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                              {projectsWithFinance.slice(0, 8).map((project) => {
+                              {allProjects.map((project) => {
                                 const isProfit = project.profit >= 0;
-                                const changePercent = project.budget > 0 ? ((project.profit / project.budget) * 100).toFixed(2) : '0.00';
+                                const profitMarginPercent = project.budget > 0 
+                                  ? ((project.profit / project.budget) * 100) 
+                                  : project.income > 0 
+                                    ? ((project.profit / project.income) * 100) 
+                                    : 0;
                                 
                                 return (
                                   <div 
                                     key={project.id} 
                                     className={`relative overflow-hidden rounded-xl border transition-all hover:scale-[1.02] ${
                                       isProfit 
-                                        ? 'bg-gradient-to-br from-green-500/5 to-emerald-500/10 border-green-500/30 hover:border-green-400' 
-                                        : 'bg-gradient-to-br from-red-500/5 to-rose-500/10 border-red-500/30 hover:border-red-400'
+                                        ? 'bg-gradient-to-br from-green-500/5 to-emerald-500/10 border-green-500/30' 
+                                        : 'bg-gradient-to-br from-red-500/5 to-rose-500/10 border-red-500/30'
                                     }`}
                                   >
-                                    {/* Candlestick mini */}
-                                    <div className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center">
-                                      <div className="relative w-3 h-6">
-                                        <div className={`absolute left-1/2 -translate-x-1/2 w-0.5 h-full ${isProfit ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                                        <div className={`absolute left-1/2 -translate-x-1/2 w-2 h-3 ${isProfit ? 'bg-green-500' : 'bg-red-500'} rounded-sm`} style={{ top: '25%' }}></div>
-                                      </div>
-                                    </div>
-                                    
                                     <div className="p-3">
+                                      {/* Header */}
                                       <div className="flex items-start justify-between mb-2">
-                                        <div>
-                                          <span className="text-xs font-bold text-white truncate block max-w-[100px]" title={project.name}>
-                                            {project.name}
-                                          </span>
-                                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                            project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-300' :
-                                            project.status === 'Deal' ? 'bg-purple-500/20 text-purple-300' :
-                                            project.status === 'Completed' ? 'bg-green-500/20 text-green-300' :
-                                            'bg-slate-500/20 text-slate-300'
-                                          }`}>
-                                            {project.status}
-                                          </span>
-                                        </div>
+                                        <span className="text-xs font-bold text-white truncate max-w-[120px]" title={project.name}>
+                                          {project.name}
+                                        </span>
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                                          project.status === 'InProgress' ? 'bg-blue-500/20 text-blue-400' :
+                                          project.status === 'Deal' ? 'bg-purple-500/20 text-purple-400' :
+                                          project.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
+                                          'bg-slate-500/20 text-slate-400'
+                                        }`}>
+                                          {project.status}
+                                        </span>
                                       </div>
                                       
-                                      <p className={`text-xl font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                                      {/* Value */}
+                                      <p className={`text-lg font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                                         {isProfit ? '+' : ''}{formatCurrency(project.profit)}
                                       </p>
                                       
-                                      <div className="flex items-center justify-between mt-2">
-                                        <span className={`text-xs font-medium ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                                          {isProfit ? '▲' : '▼'} {Math.abs(parseFloat(changePercent))}%
+                                      {/* Profit Margin */}
+                                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/50">
+                                        <span className="text-[10px] text-slate-400">Profit Margin</span>
+                                        <span className={`text-xs font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                                          {isProfit ? '▲' : '▼'} {Math.abs(profitMarginPercent).toFixed(1)}%
                                         </span>
-                                        <span className="text-[10px] text-slate-500">
-                                          Vol: {formatCurrency(project.income + project.expense)}
-                                        </span>
+                                      </div>
+                                      
+                                      {/* Volume */}
+                                      <div className="flex justify-between mt-1 text-[10px] text-slate-500">
+                                        <span>In: {formatCurrency(project.income)}</span>
+                                        <span>Out: {formatCurrency(project.expense)}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -3036,10 +2956,10 @@ export default function NEONERP() {
                         ) : (
                           <div className="text-center py-16 text-slate-500">
                             <div className="bg-slate-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <span className="text-4xl">📊</span>
+                              <TrendingUp className="w-10 h-10 opacity-30" />
                             </div>
-                            <p className="text-lg font-medium mb-1">Belum ada data transaksi</p>
-                            <p className="text-sm">Candlestick chart akan ditampilkan ketika ada project dengan transaksi</p>
+                            <p className="text-lg font-medium mb-1">Belum ada data project</p>
+                            <p className="text-sm">Chart akan ditampilkan ketika ada project tersedia</p>
                           </div>
                         )}
                       </>

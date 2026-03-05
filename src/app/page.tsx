@@ -6448,19 +6448,45 @@ export default function NEONERP() {
                               if (!file) return;
 
                               try {
-                                const text = await file.text();
-                                const backupData = JSON.parse(text);
-
-                                if (!backupData.data) {
-                                  throw new Error('Format file backup tidak valid');
+                                // Validate file
+                                if (!file.name.endsWith('.json')) {
+                                  throw new Error('File harus berformat .json');
                                 }
 
+                                const text = await file.text();
+                                
+                                // Validate JSON
+                                let backupData;
+                                try {
+                                  backupData = JSON.parse(text);
+                                } catch (jsonError) {
+                                  throw new Error('File JSON tidak valid - pastikan file backup tidak corrupted');
+                                }
+
+                                if (!backupData.data) {
+                                  throw new Error('Format file backup tidak valid - missing "data" property');
+                                }
+
+                                // Show backup info
+                                const infoMsg = `Backup Info:
+Version: ${backupData.version || 'Unknown'}
+Date: ${backupData.backupDate ? new Date(backupData.backupDate).toLocaleString('id-ID') : 'Unknown'}
+Created by: ${backupData.createdBy || 'Unknown'}
+
+Projects: ${backupData.summary?.projects || 0}
+Clients: ${backupData.summary?.clients || 0}
+Items: ${backupData.summary?.items || 0}
+Transactions: ${backupData.summary?.transactions || 0}
+Assets: ${backupData.summary?.assets || 0}
+
+Lanjutkan restore?`;
+
                                 // Confirm restore
-                                if (!confirm('PERINGATAN: Data saat ini akan diganti dengan data dari backup. Lanjutkan?')) {
+                                if (!confirm(infoMsg)) {
                                   return;
                                 }
 
-                                toast({ title: 'Memproses...', description: 'Mengembalikan data dari backup' });
+                                toast({ title: 'Memproses...', description: 'Mengembalikan data dari backup... Mohon tunggu.' });
 
                                 const res = await fetch('/api/backup', {
                                   method: 'POST',
@@ -6469,10 +6495,22 @@ export default function NEONERP() {
                                   credentials: 'include',
                                 });
 
-                                if (!res.ok) throw new Error('Failed to restore');
-
                                 const result = await res.json();
-                                toast({ title: 'Success', description: `Data berhasil di-restore: ${result.results?.projects || 0} projects, ${result.results?.items || 0} items, ${result.results?.clients || 0} clients, ${result.results?.assets || 0} assets` });
+
+                                if (!res.ok) {
+                                  throw new Error(result.error || 'Failed to restore');
+                                }
+
+                                toast({ 
+                                  title: '✅ Restore Berhasil', 
+                                  description: `Data berhasil di-restore:
+• ${result.results?.projects || 0} projects
+• ${result.results?.items || 0} items
+• ${result.results?.clients || 0} clients
+• ${result.results?.transactions || 0} transactions
+• ${result.results?.assets || 0} assets
+• ${result.results?.rabItems || 0} RAB items` 
+                                });
 
                                 // Reload data
                                 setTimeout(() => {
@@ -6480,7 +6518,12 @@ export default function NEONERP() {
                                 }, 1000);
 
                               } catch (error: any) {
-                                toast({ title: 'Error', description: error.message || 'Gagal restore data', variant: 'destructive' });
+                                console.error('Restore error:', error);
+                                toast({ 
+                                  title: '❌ Gagal Restore', 
+                                  description: error.message || 'Gagal restore data - cek console untuk detail', 
+                                  variant: 'destructive' 
+                                });
                               }
 
                               // Reset file input

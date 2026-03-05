@@ -159,11 +159,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - Admin only' }, { status: 401 });
     }
 
-    const backupData = await request.json();
+    let backupData;
+    try {
+      backupData = await request.json();
+    } catch (parseError) {
+      return NextResponse.json({ error: 'Invalid JSON file - File mungkin corrupted' }, { status: 400 });
+    }
 
     if (!backupData.data) {
-      return NextResponse.json({ error: 'Invalid backup file format' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid backup file format - Missing data property' }, { status: 400 });
     }
+
+    // Log backup info
+    console.log('Restore started by:', user.name);
+    console.log('Backup version:', backupData.version);
+    console.log('Backup date:', backupData.backupDate);
+    console.log('Backup summary:', backupData.summary);
 
     const results = {
       company: false,
@@ -619,15 +630,22 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('Restore completed:', results);
+
     return NextResponse.json({
       message: 'Restore completed successfully',
       results,
       summary: {
         totalRecords: Object.values(results).reduce((a: number, b: any) => a + (typeof b === 'number' ? b : (b ? 1 : 0)), 0),
+        backupVersion: backupData.version,
+        backupDate: backupData.backupDate,
       }
     });
   } catch (error: any) {
     console.error('Restore error:', error);
-    return NextResponse.json({ error: 'Failed to restore: ' + error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to restore: ' + error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 }

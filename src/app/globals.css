@@ -348,6 +348,24 @@
   animation: marquee-fast 15s linear infinite;
 }
 
+/* Ticker Scroll - Smooth right to left with seamless loop */
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  animation: ticker-scroll 60s linear infinite;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
 /* Price Flash Animations */
 @keyframes flash-green {
   0%, 100% { background-color: transparent; }

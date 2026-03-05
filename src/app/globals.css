@@ -334,6 +334,39 @@
   animation-play-state: paused;
 }
 
+/* Fast Marquee for Ticker */
+@keyframes marquee-fast {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee-fast {
+  animation: marquee-fast 15s linear infinite;
+}
+
+/* Price Flash Animations */
+@keyframes flash-green {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(34, 197, 94, 0.2); }
+}
+
+@keyframes flash-red {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(239, 68, 68, 0.2); }
+}
+
+.flash-green {
+  animation: flash-green 0.5s ease-in-out;
+}
+
+.flash-red {
+  animation: flash-red 0.5s ease-in-out;
+}
+
 /* Print Styles */
 @media print {
   body * {

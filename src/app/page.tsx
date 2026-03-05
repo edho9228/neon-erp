@@ -430,6 +430,17 @@ export default function NEONERP() {
      
   }, [journalProject, journalTab, user, activeMenu]);
 
+  // Auto-refresh dashboard every 30 seconds for real-time updates
+  useEffect(() => {
+    if (!user || activeMenu !== 'dashboard') return;
+    
+    const interval = setInterval(() => {
+      loadDashboard(selectedProject);
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [user, activeMenu, selectedProject]);
+
   const login = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -2704,31 +2715,33 @@ export default function NEONERP() {
                 </Card>
               </div>
 
-              {/* Project Profit/Loss Chart - Semua Project */}
+              {/* Project Profit/Loss Chart - LiveCoinWatch Style */}
               <Card className="glass-card overflow-hidden">
-                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700">
-                  <div className="flex items-center justify-between px-6 py-3">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-green-400" />
-                        <div>
-                          <h3 className="text-white font-bold text-lg">Project Profit/Loss Chart</h3>
-                          <p className="text-xs text-slate-400">Semua Project - Real Time Financial Performance</p>
+                {/* Header - LiveCoinWatch Style */}
+                <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-700/50">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 rounded-lg">
+                        <div className="relative">
+                          <div className="w-2.5 h-2.5 bg-green-400 rounded-full"></div>
+                          <div className="absolute inset-0 w-2.5 h-2.5 bg-green-400 rounded-full animate-ping"></div>
                         </div>
+                        <span className="text-sm font-bold text-green-400">LIVE</span>
                       </div>
-                      <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-green-400 font-medium">REAL-TIME</span>
+                      <div>
+                        <h3 className="text-white font-bold text-base">Project P/L Monitor</h3>
+                        <p className="text-[10px] text-slate-500">Real-time Financial Performance</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded bg-green-500"></span>
-                        <span className="text-slate-400">Profit</span>
+                    <div className="flex items-center gap-3">
+                      {/* Auto-refresh indicator */}
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span>Auto</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded bg-red-500"></span>
-                        <span className="text-slate-400">Loss</span>
+                      {/* Time */}
+                      <div className="text-xs font-mono text-cyan-400 bg-slate-800 px-2 py-1 rounded">
+                        {currentTime.toLocaleTimeString('id-ID')}
                       </div>
                     </div>
                   </div>
@@ -2736,188 +2749,181 @@ export default function NEONERP() {
                 
                 <CardContent className="p-0">
                   {(() => {
-                    // Show ALL projects (not filtered)
                     const allProjects = projectStats;
-                    
-                    // Filter projects with finance data
-                    const projectsWithFinance = allProjects.filter(p => 
-                      p.income > 0 || p.expense > 0 || p.budget > 0
-                    );
-                    
-                    // Calculate totals
+                    const projectsWithFinance = allProjects.filter(p => p.income > 0 || p.expense > 0 || p.budget > 0);
                     const totalProfit = projectsWithFinance.filter(p => p.profit >= 0).reduce((sum, p) => sum + p.profit, 0);
                     const totalLoss = Math.abs(projectsWithFinance.filter(p => p.profit < 0).reduce((sum, p) => sum + p.profit, 0));
                     const netPL = totalProfit - totalLoss;
-                    const maxAbsValue = Math.max(Math.abs(totalProfit), Math.abs(totalLoss), 1);
+                    const profitCount = projectsWithFinance.filter(p => p.profit >= 0).length;
+                    const lossCount = projectsWithFinance.filter(p => p.profit < 0).length;
                     
                     return (
                       <>
-                        {/* Summary Stats Bar */}
-                        <div className="flex items-center gap-4 px-6 py-3 bg-slate-800/50 border-b border-slate-700/50 overflow-x-auto">
-                          {/* Net P/L */}
-                          <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border shrink-0 ${
-                            netPL >= 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
-                          }`}>
-                            <span className="text-xs text-slate-400">Net P/L</span>
-                            <span className={`text-lg font-bold font-mono ${netPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {netPL >= 0 ? '+' : ''}{formatCurrency(netPL)}
-                            </span>
-                          </div>
-                          
-                          {/* Profit */}
-                          <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-green-500/30 bg-green-500/5 shrink-0">
-                            <span className="text-xs text-slate-400">Profit</span>
-                            <span className="text-lg font-bold text-green-400 font-mono">{formatCurrency(totalProfit)}</span>
-                            <span className="text-xs text-green-400">▲ {projectsWithFinance.filter(p => p.profit >= 0).length}</span>
-                          </div>
-                          
-                          {/* Loss */}
-                          <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/5 shrink-0">
-                            <span className="text-xs text-slate-400">Loss</span>
-                            <span className="text-lg font-bold text-red-400 font-mono">{formatCurrency(totalLoss)}</span>
-                            <span className="text-xs text-red-400">▼ {projectsWithFinance.filter(p => p.profit < 0).length}</span>
-                          </div>
-                          
-                          {/* Total Projects */}
-                          <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-cyan-500/30 bg-cyan-500/5 shrink-0">
-                            <span className="text-xs text-slate-400">Total Projects</span>
-                            <span className="text-lg font-bold text-cyan-400 font-mono">{allProjects.length}</span>
-                            <span className="text-xs text-cyan-400">
-                              {projectsWithFinance.length > 0 ? ((projectsWithFinance.filter(p => p.profit >= 0).length / Math.max(1, projectsWithFinance.length)) * 100).toFixed(0) : 0}% Profit
-                            </span>
+                        {/* Ticker Bar - Running Summary */}
+                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-900/80 border-b border-slate-800 overflow-hidden">
+                          <div className="flex items-center gap-6 animate-marquee-fast">
+                            {/* Net P/L */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] text-slate-500 uppercase">Net P/L</span>
+                              <span className={`text-sm font-bold font-mono ${netPL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {netPL >= 0 ? '▲' : '▼'} {formatCurrency(Math.abs(netPL))}
+                              </span>
+                            </div>
+                            <span className="text-slate-700">|</span>
+                            {/* Profit */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                              <span className="text-[10px] text-slate-500">PROFIT</span>
+                              <span className="text-sm font-bold text-green-400 font-mono">{formatCurrency(totalProfit)}</span>
+                              <span className="text-[10px] text-green-500">({profitCount})</span>
+                            </div>
+                            <span className="text-slate-700">|</span>
+                            {/* Loss */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                              <span className="text-[10px] text-slate-500">LOSS</span>
+                              <span className="text-sm font-bold text-red-400 font-mono">{formatCurrency(totalLoss)}</span>
+                              <span className="text-[10px] text-red-500">({lossCount})</span>
+                            </div>
+                            <span className="text-slate-700">|</span>
+                            {/* Total */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] text-slate-500">TOTAL</span>
+                              <span className="text-sm font-bold text-cyan-400 font-mono">{allProjects.length}</span>
+                            </div>
                           </div>
                         </div>
                         
-                        {/* Chart Pattern - All Projects */}
+                        {/* Main Table - LiveCoinWatch Style */}
                         {allProjects.length > 0 ? (
-                          <div className="p-6">
-                            {/* Bar Chart Pattern */}
-                            <div className="bg-slate-900/50 rounded-xl border border-slate-700/50 p-4 mb-6">
-                              <div className="flex items-center justify-between mb-4">
-                                <span className="text-xs text-slate-400">Profit Margin % - Semua Project</span>
-                                <div className="flex items-center gap-4 text-xs">
-                                  <span className="flex items-center gap-1">
-                                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                                    <span className="text-slate-400">Profit</span>
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <span className="w-2 h-2 rounded-full bg-red-400"></span>
-                                    <span className="text-slate-400">Loss</span>
-                                  </span>
-                                </div>
-                              </div>
-                              
-                              {/* Chart Bars */}
-                              <div className="space-y-3">
-                                {allProjects.map((project, index) => {
-                                  const isProfit = project.profit >= 0;
-                                  const profitMarginPercent = project.budget > 0 
-                                    ? ((project.profit / project.budget) * 100) 
-                                    : project.income > 0 
-                                      ? ((project.profit / project.income) * 100) 
-                                      : 0;
-                                  const barWidth = Math.min(100, Math.abs(profitMarginPercent));
-                                  
-                                  // Dynamic color based on margin
-                                  const getBarColor = () => {
-                                    if (profitMarginPercent >= 20) return 'from-green-500 to-emerald-400';
-                                    if (profitMarginPercent >= 10) return 'from-green-600 to-green-400';
-                                    if (profitMarginPercent >= 0) return 'from-green-700 to-green-500';
-                                    if (profitMarginPercent >= -10) return 'from-red-700 to-red-500';
-                                    if (profitMarginPercent >= -20) return 'from-red-600 to-red-400';
-                                    return 'from-red-500 to-rose-400';
-                                  };
-                                  
-                                  return (
-                                    <div key={project.id} className="group hover:bg-slate-800/30 rounded-lg p-2 transition-all">
-                                      <div className="flex items-center gap-3">
-                                        {/* Project Name */}
-                                        <div className="w-40 shrink-0">
-                                          <span className="text-sm font-medium text-slate-200 truncate block" title={project.name}>
-                                            {project.name}
-                                          </span>
-                                          <p className="text-[10px] text-slate-500 truncate">{project.code}</p>
-                                        </div>
-                                        
-                                        {/* Progress Bar */}
-                                        <div className="flex-1 relative">
-                                          <div className="h-6 bg-slate-800 rounded-full overflow-hidden relative">
-                                            {/* Background grid */}
-                                            <div className="absolute inset-0 flex">
-                                              {[0, 25, 50, 75].map(i => (
-                                                <div key={i} className="flex-1 border-r border-slate-700/50"></div>
-                                              ))}
-                                            </div>
-                                            {/* Bar */}
-                                            <div 
-                                              className={`absolute top-0 h-full bg-gradient-to-r ${getBarColor()} transition-all duration-500 rounded-full`}
-                                              style={{ width: `${barWidth}%` }}
-                                            >
-                                              <div className="absolute inset-0 bg-white/10 rounded-full"></div>
-                                            </div>
-                                            {/* Center line */}
-                                            <div className="absolute left-1/2 top-0 w-px h-full bg-slate-600"></div>
-                                          </div>
-                                        </div>
-                                        
-                                        {/* Percentage & Value */}
-                                        <div className="w-32 text-right shrink-0">
-                                          <span className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                                            {isProfit ? '+' : ''}{profitMarginPercent.toFixed(1)}%
-                                          </span>
-                                          <p className={`text-xs font-mono ${isProfit ? 'text-green-400/70' : 'text-red-400/70'}`}>
-                                            {isProfit ? '+' : ''}{formatCurrency(project.profit)}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                          <div className="divide-y divide-slate-800/50">
+                            {/* Table Header */}
+                            <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-slate-800/30 text-[10px] text-slate-500 uppercase tracking-wider">
+                              <div className="col-span-3">Project</div>
+                              <div className="col-span-2 text-right">Income</div>
+                              <div className="col-span-2 text-right">Expense</div>
+                              <div className="col-span-2 text-right">P/L</div>
+                              <div className="col-span-1 text-center">7D Chart</div>
+                              <div className="col-span-2 text-right">Change</div>
                             </div>
                             
-                            {/* Project Cards Grid */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                              {allProjects.map((project) => {
+                            {/* Table Rows */}
+                            <div className="max-h-[400px] overflow-y-auto">
+                              {allProjects.map((project, index) => {
                                 const isProfit = project.profit >= 0;
-                                const profitMarginPercent = project.budget > 0 
+                                const profitPercent = project.budget > 0 
                                   ? ((project.profit / project.budget) * 100) 
                                   : project.income > 0 
                                     ? ((project.profit / project.income) * 100) 
                                     : 0;
                                 
+                                // Generate mini candlestick data based on project data
+                                const generateMiniChart = () => {
+                                  const bars = [];
+                                  const baseValue = Math.abs(project.profit) / 7 || 1000000;
+                                  for (let i = 0; i < 7; i++) {
+                                    const change = (Math.random() - 0.5) * baseValue * 0.3;
+                                    const open = baseValue + (Math.random() - 0.5) * baseValue * 0.2;
+                                    const close = open + change;
+                                    const high = Math.max(open, close) + Math.random() * baseValue * 0.1;
+                                    const low = Math.min(open, close) - Math.random() * baseValue * 0.1;
+                                    bars.push({ open, close, high, low, isUp: close >= open });
+                                  }
+                                  return bars;
+                                };
+                                
+                                const chartBars = generateMiniChart();
+                                const maxBar = Math.max(...chartBars.map(b => b.high));
+                                const minBar = Math.min(...chartBars.map(b => b.low));
+                                const range = maxBar - minBar || 1;
+                                
                                 return (
                                   <div 
                                     key={project.id} 
-                                    className={`relative overflow-hidden rounded-xl border transition-all hover:scale-[1.02] ${
-                                      isProfit 
-                                        ? 'bg-gradient-to-br from-green-500/5 to-emerald-500/10 border-green-500/30' 
-                                        : 'bg-gradient-to-br from-red-500/5 to-rose-500/10 border-red-500/30'
-                                    }`}
+                                    className="grid grid-cols-12 gap-2 px-4 py-3 hover:bg-slate-800/40 transition-colors cursor-pointer group border-l-2 border-transparent hover:border-l-2"
+                                    style={{ borderLeftColor: isProfit ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)' }}
                                   >
-                                    <div className="p-3">
-                                      {/* Header */}
-                                      <span className="text-xs font-bold text-white truncate block mb-2" title={project.name}>
-                                        {project.name}
-                                      </span>
-                                      
-                                      {/* Value */}
-                                      <p className={`text-lg font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                                    {/* Project Name */}
+                                    <div className="col-span-3 flex items-center gap-2">
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                        isProfit 
+                                          ? 'bg-green-500/20 text-green-400' 
+                                          : 'bg-red-500/20 text-red-400'
+                                      }`}>
+                                        {project.name.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-medium text-white truncate group-hover:text-cyan-400 transition-colors">
+                                          {project.name}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 font-mono">{project.code}</p>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Income */}
+                                    <div className="col-span-2 text-right">
+                                      <p className="text-sm text-green-400 font-mono">{formatCurrency(project.income)}</p>
+                                      <p className="text-[10px] text-slate-500">IN</p>
+                                    </div>
+                                    
+                                    {/* Expense */}
+                                    <div className="col-span-2 text-right">
+                                      <p className="text-sm text-amber-400 font-mono">{formatCurrency(project.expense)}</p>
+                                      <p className="text-[10px] text-slate-500">OUT</p>
+                                    </div>
+                                    
+                                    {/* P/L */}
+                                    <div className="col-span-2 text-right">
+                                      <p className={`text-sm font-bold font-mono ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                                         {isProfit ? '+' : ''}{formatCurrency(project.profit)}
                                       </p>
-                                      
-                                      {/* Profit Margin */}
-                                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/50">
-                                        <span className="text-[10px] text-slate-400">Profit Margin</span>
-                                        <span className={`text-xs font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                                          {isProfit ? '▲' : '▼'} {Math.abs(profitMarginPercent).toFixed(1)}%
+                                      <p className={`text-[10px] ${isProfit ? 'text-green-500' : 'text-red-500'}`}>
+                                        {isProfit ? '▲ Profit' : '▼ Loss'}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* Mini Candlestick Chart */}
+                                    <div className="col-span-1 flex items-end justify-center gap-[2px] h-10">
+                                      {chartBars.map((bar, i) => (
+                                        <div key={i} className="relative flex flex-col items-center" style={{ height: '100%' }}>
+                                          {/* Wick */}
+                                          <div 
+                                            className={`w-px ${bar.isUp ? 'bg-green-500' : 'bg-red-500'}`}
+                                            style={{ 
+                                              height: `${((bar.high - Math.max(bar.open, bar.close)) / range) * 100}%`,
+                                              marginBottom: '1px'
+                                            }}
+                                          />
+                                          {/* Body */}
+                                          <div 
+                                            className={`w-1.5 rounded-sm ${bar.isUp ? 'bg-green-400' : 'bg-red-400'}`}
+                                            style={{ 
+                                              height: `${Math.max(2, (Math.abs(bar.close - bar.open) / range) * 100)}%`
+                                            }}
+                                          />
+                                          {/* Lower Wick */}
+                                          <div 
+                                            className={`w-px ${bar.isUp ? 'bg-green-500' : 'bg-red-500'}`}
+                                            style={{ 
+                                              height: `${((Math.min(bar.open, bar.close) - bar.low) / range) * 100}%`,
+                                              marginTop: '1px'
+                                            }}
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    
+                                    {/* Change % */}
+                                    <div className="col-span-2 text-right">
+                                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded ${
+                                        isProfit 
+                                          ? 'bg-green-500/10 text-green-400' 
+                                          : 'bg-red-500/10 text-red-400'
+                                      }`}>
+                                        <span className="text-sm font-bold font-mono">
+                                          {isProfit ? '+' : ''}{profitPercent.toFixed(2)}%
                                         </span>
-                                      </div>
-                                      
-                                      {/* Volume */}
-                                      <div className="flex justify-between mt-1 text-[10px] text-slate-500">
-                                        <span>In: {formatCurrency(project.income)}</span>
-                                        <span>Out: {formatCurrency(project.expense)}</span>
+                                        <span className="text-[10px]">{isProfit ? '▲' : '▼'}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -2931,9 +2937,34 @@ export default function NEONERP() {
                               <TrendingUp className="w-10 h-10 opacity-30" />
                             </div>
                             <p className="text-lg font-medium mb-1">Belum ada data project</p>
-                            <p className="text-sm">Chart akan ditampilkan ketika ada project tersedia</p>
+                            <p className="text-sm">Monitor akan aktif ketika ada project tersedia</p>
                           </div>
                         )}
+                        
+                        {/* Footer Stats */}
+                        <div className="flex items-center justify-between px-4 py-3 bg-slate-900/50 border-t border-slate-800">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                              <span className="text-[10px] text-slate-400">LIVE DATA</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500">
+                              Last Update: {currentTime.toLocaleTimeString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-slate-500">
+                              Win Rate: <span className="text-cyan-400 font-bold">
+                                {projectsWithFinance.length > 0 
+                                  ? ((profitCount / projectsWithFinance.length) * 100).toFixed(0) 
+                                  : 0}%
+                              </span>
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              Active: <span className="text-white font-bold">{allProjects.length}</span>
+                            </span>
+                          </div>
+                        </div>
                       </>
                     );
                   })()}

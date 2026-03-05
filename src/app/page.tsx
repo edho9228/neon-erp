@@ -497,6 +497,12 @@ export default function NEONERP() {
         : '/api/dashboard';
       const res = await fetch(url, { credentials: 'include' });
       const data = await res.json();
+      console.log('Dashboard API response:', {
+        stats: data.stats,
+        projectsCount: data.projects?.length,
+        projects: data.projects,
+        allProjects: data.allProjects
+      });
       setDashboardStats(data.stats);
       setDailyData(data.dailyData || []);
       setTreemapData(data.treemapData || []);
@@ -2359,12 +2365,21 @@ export default function NEONERP() {
             <span className="text-xs font-bold text-green-400">LIVE REPORT PROJECT</span>
           </div>
 
-          {/* Ticker Content - Project P/L and Bobot (Deal/InProgress only) */}
+          {/* Ticker Content - Project P/L and Bobot (Active projects only) */}
           <div className="flex-1 overflow-hidden ml-2" id="ticker-container">
             {(() => {
-              // Filter hanya project dengan status Deal atau InProgress
-              const activeProjects = projectStats.filter((p: any) => p.status === 'Deal' || p.status === 'InProgress');
+              // Gunakan projectStats langsung dari API (sudah terfilter status !== 'Completed')
+              const activeProjects = projectStats;
               const totalBudget = activeProjects.reduce((sum: number, p: any) => sum + (p.budget || p.contractValue || 0), 0);
+
+              // Jika tidak ada project, tampilkan pesan
+              if (activeProjects.length === 0) {
+                return (
+                  <div className="flex items-center h-full text-xs text-slate-400">
+                    <span>Menunggu data project aktif...</span>
+                  </div>
+                );
+              }
 
               // Build ticker content
               const tickerItems = activeProjects.map((project: any) => {
@@ -2392,11 +2407,8 @@ export default function NEONERP() {
               });
 
               // Calculate duration based on 50px per second speed
-              // Measure content width and calculate time needed
-              const containerWidth = typeof window !== 'undefined' ? (document.getElementById('ticker-container')?.offsetWidth || 800) : 800;
-              const estimatedContentWidth = activeProjects.length * 350; // ~350px per project item
-              const totalWidth = estimatedContentWidth + containerWidth;
-              const duration = totalWidth / 50; // 50px per second
+              const estimatedContentWidth = activeProjects.length * 400; // ~400px per project item
+              const duration = Math.max(20, estimatedContentWidth / 50); // 50px per second
 
               return (
                 <div

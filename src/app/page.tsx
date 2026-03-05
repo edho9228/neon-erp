@@ -2333,40 +2333,107 @@ export default function NEONERP() {
         </div>
       </header>
 
-      {/* Marquee Project Profit/Loss Update - Below Header */}
-      <div className="fixed top-16 left-0 right-0 h-8 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 flex items-center overflow-hidden z-40">
-        <div className="flex items-center gap-2 px-4 bg-gradient-to-r from-cyan-600/30 to-green-600/30 h-full border-r border-slate-700 shrink-0">
-          <TrendingUp className="w-3.5 h-3.5 text-green-400" />
-          <span className="text-xs font-medium text-green-400">Profit/Loss Update</span>
-        </div>
-        <div className="flex-1 overflow-hidden">
-          {projectStats && projectStats.length > 0 ? (
-            <div className="animate-marquee whitespace-nowrap flex items-center">
-              {[...projectStats, ...projectStats].map((project, idx) => {
-                const profit = project.income - project.expense;
-                const isProfit = profit >= 0;
-                return (
-                  <span key={`${project.id}-${idx}`} className="inline-flex items-center gap-3 mx-6 text-xs">
-                    <span className="font-medium text-slate-200">{project.name}</span>
-                    <span className={`font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                      {isProfit ? '+' : ''}{formatCurrency(profit)}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                      project.status === 'InProgress' ? 'bg-cyan-500/20 text-cyan-400' :
-                      project.status === 'Completed' ? 'bg-green-500/20 text-green-400' :
-                      project.status === 'Deal' ? 'bg-purple-500/20 text-purple-400' :
-                      'bg-slate-500/20 text-slate-400'
-                    }`}>
-                      {project.status}
-                    </span>
-                    <span className="text-cyan-400">•</span>
-                  </span>
-                );
-              })}
-            </div>
-          ) : (
-            <span className="text-xs text-slate-500 px-4">Belum ada data project</span>
-          )}
+      {/* 📊 Live Candlestick Cheatsheet - Below Header */}
+      <div className="fixed top-16 left-0 right-0 h-8 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 z-40">
+        {/* Header Row */}
+        <div className="flex items-center h-full px-4">
+          <div className="flex items-center gap-2 px-3 bg-gradient-to-r from-cyan-600/30 to-purple-600/30 h-6 rounded border border-cyan-500/30">
+            <span className="text-sm">📊</span>
+            <span className="text-xs font-bold text-cyan-400">LIVE CANDLESTICK CHEATSHEET</span>
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+          </div>
+          <div className="flex-1 overflow-hidden ml-4">
+            {(() => {
+              // Filter projects based on selection
+              const displayProjects = selectedProject && selectedProject !== 'all'
+                ? projectStats.filter(p => p.id === selectedProject)
+                : projectStats;
+              
+              if (!displayProjects || displayProjects.length === 0) {
+                return <span className="text-xs text-slate-500">Belum ada data project</span>;
+              }
+              
+              return (
+                <div className="animate-marquee whitespace-nowrap flex items-center">
+                  {[...displayProjects, ...displayProjects].map((project, idx) => {
+                    const profit = project.income - project.expense;
+                    const isProfit = profit >= 0;
+                    const profitPercent = project.budget > 0 ? ((profit / project.budget) * 100) : 0;
+                    
+                    // Calculate candlestick values
+                    const open = project.budget || project.contractValue || 0;
+                    const close = project.income || 0;
+                    const high = Math.max(open, close, project.income + (project.budget * 0.1));
+                    const low = Math.min(open, close, project.income - (project.expense * 0.1));
+                    const candleBody = Math.abs(close - open);
+                    const bodyTop = Math.max(open, close);
+                    const range = high - low || 1;
+                    
+                    // Daily change simulation (based on actual data)
+                    const dailyChange = project.expense > 0 ? ((project.income - project.expense) / project.expense * 10) : 0;
+                    const dailyChangePercent = dailyChange.toFixed(2);
+                    
+                    // Color scheme based on profit/loss
+                    const candleColor = isProfit ? 'bg-green-500' : 'bg-red-500';
+                    const textColor = isProfit ? 'text-green-400' : 'text-red-400';
+                    const borderColor = isProfit ? 'border-green-500/50' : 'border-red-500/50';
+                    const bgColor = isProfit ? 'bg-green-500/5' : 'bg-red-500/5';
+                    
+                    return (
+                      <div 
+                        key={`${project.id}-${idx}`} 
+                        className={`inline-flex items-center gap-3 mx-3 px-3 py-1 rounded border ${borderColor} ${bgColor} transition-all hover:scale-105`}
+                      >
+                        {/* Mini Candlestick Chart */}
+                        <div className="relative w-8 h-6 flex items-center justify-center">
+                          {/* Wick line */}
+                          <div className={`absolute w-0.5 h-full ${isProfit ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                          {/* Body */}
+                          <div 
+                            className={`absolute w-4 ${candleColor} rounded-sm`}
+                            style={{
+                              height: `${Math.min(80, (candleBody / range) * 100)}%`,
+                              top: `${100 - ((bodyTop - low) / range) * 100}%`,
+                            }}
+                          ></div>
+                        </div>
+                        
+                        {/* Project Info */}
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-200 truncate max-w-[120px]" title={project.name}>
+                            {project.name}
+                          </span>
+                          <span className={`text-[10px] font-mono ${textColor}`}>
+                            {isProfit ? '+' : ''}{formatCurrency(profit)}
+                          </span>
+                        </div>
+                        
+                        {/* Price/Change Info */}
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {profitPercent.toFixed(1)}%
+                          </span>
+                          <span className={`text-[10px] font-bold ${textColor}`}>
+                            {isProfit ? '▲' : '▼'} {Math.abs(parseFloat(dailyChangePercent))}%
+                          </span>
+                        </div>
+                        
+                        {/* Status Badge */}
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                          project.status === 'InProgress' ? 'bg-blue-500/30 text-blue-300' :
+                          project.status === 'Completed' ? 'bg-green-500/30 text-green-300' :
+                          project.status === 'Deal' ? 'bg-purple-500/30 text-purple-300' :
+                          'bg-slate-500/30 text-slate-300'
+                        }`}>
+                          {project.status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </div>
 

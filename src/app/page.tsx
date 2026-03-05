@@ -257,12 +257,12 @@ export default function NEONERP() {
   const [items, setItems] = useState<MasterItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [dailyData, setDailyData] = useState<any[]>([]);
   const [treemapData, setTreemapData] = useState<TreemapData[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<any[]>([]);
   const [projectStats, setProjectStats] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
-  const [projectMonthlyData, setProjectMonthlyData] = useState<any[]>([]);
+  const [projectDailyData, setProjectDailyData] = useState<any[]>([]);
   const [company, setCompany] = useState<any>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
@@ -485,12 +485,12 @@ export default function NEONERP() {
       const res = await fetch(url, { credentials: 'include' });
       const data = await res.json();
       setDashboardStats(data.stats);
-      setMonthlyData(data.monthlyData || []);
+      setDailyData(data.dailyData || []);
       setTreemapData(data.treemapData || []);
       setStatusDistribution(data.statusDistribution || []);
       setProjectStats(data.projects || []);
       setActivityLogs(data.activityLogs || []);
-      setProjectMonthlyData(data.projectMonthlyData || []);
+      setProjectDailyData(data.projectDailyData || []);
     } catch (error) {
       console.error('Load dashboard error:', error);
     }
@@ -3611,20 +3611,20 @@ export default function NEONERP() {
                 </CardContent>
               </Card>
 
-              {/* Monthly Chart & Recent Activity */}
+              {/* Daily Chart & Recent Activity */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Monthly Overview */}
+                {/* Daily Overview */}
                 <Card className="glass-card">
                   <CardHeader>
-                    <CardTitle className="text-white text-lg">Planned vs Actual - All Project Status</CardTitle>
-                    <CardDescription className="text-slate-400">Monthly trend overview</CardDescription>
+                    <CardTitle className="text-white text-lg">Daily Report - Last 30 Days</CardTitle>
+                    <CardDescription className="text-slate-400">Income vs Expense harian</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={monthlyData}>
+                        <ComposedChart data={dailyData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                          <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} />
+                          <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} interval="preserveStartEnd" />
                           <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `${(v/1000000).toFixed(0)}M`} />
                           <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `${v}%`} domain={[80, 100]} />
                           <Tooltip 
@@ -3632,9 +3632,9 @@ export default function NEONERP() {
                             formatter={(value: number) => formatCurrency(value)}
                           />
                           <Legend />
-                          <Bar yAxisId="left" dataKey="expense" name="Actual" fill="#f97316" radius={[4, 4, 0, 0]} />
-                          <Bar yAxisId="left" dataKey="income" name="Planned" fill="#64748b" radius={[4, 4, 0, 0]} />
-                          <Line yAxisId="right" type="monotone" dataKey={() => 85 + Math.random() * 10} name="Billable %" stroke="#ec4899" strokeWidth={2} dot={{ fill: '#ec4899', r: 3 }} />
+                          <Bar yAxisId="left" dataKey="expense" name="Expense" fill="#f97316" radius={[4, 4, 0, 0]} />
+                          <Bar yAxisId="left" dataKey="income" name="Income" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                          <Line yAxisId="left" type="monotone" dataKey="cumulativeProfit" name="Cumulative P/L" stroke="#ec4899" strokeWidth={2} dot={{ fill: '#ec4899', r: 3 }} />
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>

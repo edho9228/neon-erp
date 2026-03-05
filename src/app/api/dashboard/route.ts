@@ -74,40 +74,48 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Monthly data
-    const monthlyData: { month: string; income: number; expense: number; profit: number }[] = [];
+    // Daily data - Last 30 days
+    const dailyData: { date: string; income: number; expense: number; profit: number; cumulativeProfit: number }[] = [];
     const now = new Date();
+    let totalCumulativeProfit = 0;
     
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthName = date.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dateLabel = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
       
-      const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
-      const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
 
-      let monthTransactions: any[] = [];
+      let dayTransactions: any[] = [];
       try {
-        monthTransactions = await db.transaction.findMany({
+        dayTransactions = await db.transaction.findMany({
           where: {
             date: {
-              gte: startDate,
-              lte: endDate,
+              gte: dayStart,
+              lte: dayEnd,
             },
             ...(projectId && projectId !== 'all' ? { projectId } : {}),
           },
         });
       } catch (e) {
-        monthTransactions = [];
+        dayTransactions = [];
       }
 
-      const income = monthTransactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
-      const expense = monthTransactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
+      const income = dayTransactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
+      const expense = dayTransactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
+      const dayProfit = income - expense;
+      totalCumulativeProfit += dayProfit;
 
-      monthlyData.push({
-        month: monthName,
+      dailyData.push({
+        date: dateLabel,
         income,
         expense,
-        profit: income - expense,
+        profit: dayProfit,
+        cumulativeProfit: totalCumulativeProfit,
       });
     }
 
@@ -170,10 +178,10 @@ export async function GET(request: NextRequest) {
         income: p.income,
       }));
 
-    // Project monthly data
-    const projectMonthlyData: { projectId: string; projectName: string; month: string; cumulativeProfit: number; monthlyProfit: number }[] = [];
+    // Project daily data - cumulative profit per project
+    const projectDailyData: { projectId: string; projectName: string; date: string; cumulativeProfit: number; dailyProfit: number }[] = [];
     
-    // Include all projects that have transactions (not just InProgress/Deal)
+    // Include all projects that have transactions
     const projectsWithTransactions = projects.filter(p => 
       p.transactions && p.transactions.length > 0
     );
@@ -181,39 +189,42 @@ export async function GET(request: NextRequest) {
     for (const project of projectsWithTransactions) {
       let cumulativeProfit = 0;
       
-      for (let i = 11; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthName = date.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateLabel = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
         
-        const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
-        const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
 
-        let monthTransactions: any[] = [];
+        let dayTransactions: any[] = [];
         try {
-          monthTransactions = await db.transaction.findMany({
+          dayTransactions = await db.transaction.findMany({
             where: {
               projectId: project.id,
               date: {
-                gte: startDate,
-                lte: endDate,
+                gte: dayStart,
+                lte: dayEnd,
               },
             },
           });
         } catch (e) {
-          monthTransactions = [];
+          dayTransactions = [];
         }
 
-        const income = monthTransactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
-        const expense = monthTransactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
-        const monthlyProfit = income - expense;
-        cumulativeProfit += monthlyProfit;
+        const income = dayTransactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
+        const expense = dayTransactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
+        const dailyProfit = income - expense;
+        cumulativeProfit += dailyProfit;
 
-        projectMonthlyData.push({
+        projectDailyData.push({
           projectId: project.id,
           projectName: project.name,
-          month: monthName,
+          date: dateLabel,
           cumulativeProfit,
-          monthlyProfit,
+          dailyProfit,
         });
       }
     }
@@ -229,12 +240,12 @@ export async function GET(request: NextRequest) {
         profitMargin: totalBudget > 0 ? (((totalIncome - totalExpense) / totalBudget) * 100) : 0,
       },
       projects: projectStats,
-      monthlyData,
+      dailyData,
       statusDistribution,
       recentTransactions,
       activityLogs,
       treemapData,
-      projectMonthlyData,
+      projectDailyData,
       selectedProject: projectId,
     });
   } catch (error) {

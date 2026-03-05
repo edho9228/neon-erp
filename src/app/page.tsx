@@ -6447,6 +6447,39 @@ export default function NEONERP() {
                               const file = e.target.files?.[0];
                               if (!file) return;
 
+                              // Create restore function with chunked approach
+                              const restoreWithChunks = async (backupData: any) => {
+                                const phases = ['clear', 'core', 'projects', 'transactions', 'assets', 'other'];
+                                const results: any = {};
+                                
+                                for (const phase of phases) {
+                                  try {
+                                    toast({ title: `Restore: ${phase}...`, description: `Memproses fase ${phase}...` });
+                                    
+                                    const res = await fetch(`/api/backup?phase=${phase}`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify(backupData),
+                                      credentials: 'include',
+                                    });
+
+                                    if (!res.ok) {
+                                      const err = await res.json();
+                                      throw new Error(err.error || `Failed at phase ${phase}`);
+                                    }
+                                    
+                                    const result = await res.json();
+                                    Object.assign(results, result.results);
+                                    console.log(`Phase ${phase} completed:`, result.results);
+                                  } catch (err: any) {
+                                    console.error(`Phase ${phase} error:`, err);
+                                    throw err;
+                                  }
+                                }
+                                
+                                return results;
+                              };
+
                               try {
                                 // Validate file
                                 if (!file.name.endsWith('.json')) {
@@ -6479,6 +6512,7 @@ Items: ${backupData.summary?.items || 0}
 Transactions: ${backupData.summary?.transactions || 0}
 Assets: ${backupData.summary?.assets || 0}
 
+⚠️ Proses restore akan dilakukan bertahap.
 Lanjutkan restore?`;
 
                                 // Confirm restore
@@ -6486,30 +6520,18 @@ Lanjutkan restore?`;
                                   return;
                                 }
 
-                                toast({ title: 'Memproses...', description: 'Mengembalikan data dari backup... Mohon tunggu.' });
-
-                                const res = await fetch('/api/backup', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify(backupData),
-                                  credentials: 'include',
-                                });
-
-                                const result = await res.json();
-
-                                if (!res.ok) {
-                                  throw new Error(result.error || 'Failed to restore');
-                                }
+                                // Run chunked restore
+                                const finalResults = await restoreWithChunks(backupData);
 
                                 toast({ 
-                                  title: '✅ Restore Berhasil', 
+                                  title: '✅ Restore Berhasil!', 
                                   description: `Data berhasil di-restore:
-• ${result.results?.projects || 0} projects
-• ${result.results?.items || 0} items
-• ${result.results?.clients || 0} clients
-• ${result.results?.transactions || 0} transactions
-• ${result.results?.assets || 0} assets
-• ${result.results?.rabItems || 0} RAB items` 
+• ${finalResults.projects || 0} projects
+• ${finalResults.items || 0} items  
+• ${finalResults.clients || 0} clients
+• ${finalResults.transactions || 0} transactions
+• ${finalResults.assets || 0} assets
+• ${finalResults.rabItems || 0} RAB items` 
                                 });
 
                                 // Reload data
@@ -6521,7 +6543,7 @@ Lanjutkan restore?`;
                                 console.error('Restore error:', error);
                                 toast({ 
                                   title: '❌ Gagal Restore', 
-                                  description: error.message || 'Gagal restore data - cek console untuk detail', 
+                                  description: error.message || 'Gagal restore data', 
                                   variant: 'destructive' 
                                 });
                               }

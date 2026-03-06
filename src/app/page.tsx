@@ -3102,8 +3102,8 @@ export default function NEONERP() {
                           </div>
                         </div>
                         
-                        {/* Candlestick Chart with Zoom/Pan */}
-                        <div className="h-[350px] w-full bg-slate-900/50 rounded-lg p-2">
+                        {/* Candlestick Chart */}
+                        <div className="h-[450px] w-full bg-slate-900/50 rounded-lg p-2">
                           <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart
                               data={candleData}
@@ -3150,30 +3150,6 @@ export default function NEONERP() {
                                 />
                               ))}
                             </ComposedChart>
-                          </ResponsiveContainer>
-                        </div>
-                        
-                        {/* Brush for Zoom/Pan */}
-                        <div className="h-[80px] w-full bg-slate-900/30 rounded-lg p-2">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={candleData}>
-                              <XAxis dataKey="name" hide />
-                              <YAxis hide />
-                              <Brush 
-                                dataKey="name" 
-                                height={60} 
-                                stroke="#0ea5e9"
-                                fill="rgba(14, 165, 233, 0.1)"
-                                travellerWidth={10}
-                              />
-                              <Line 
-                                type="monotone" 
-                                dataKey="close" 
-                                stroke="#0ea5e9" 
-                                dot={false}
-                                strokeWidth={2}
-                              />
-                            </LineChart>
                           </ResponsiveContainer>
                         </div>
                         
@@ -3857,6 +3833,40 @@ export default function NEONERP() {
                     <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={dailyData}>
+                          <defs>
+                            {/* Glow filter for orange */}
+                            <filter id="glow-orange" x="-50%" y="-50%" width="200%" height="200%">
+                              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                              <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
+                            {/* Glow filter for green */}
+                            <filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
+                              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                              <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
+                            {/* Glow filter for cyan */}
+                            <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
+                              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                              <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
+                            {/* Glow filter for purple */}
+                            <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+                              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                              <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                           <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} interval="preserveStartEnd" />
                           <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} tickFormatter={(v) => `${(v/1000000).toFixed(0)}M`} />
@@ -3866,8 +3876,8 @@ export default function NEONERP() {
                             formatter={(value: number) => formatCurrency(value)}
                           />
                           <Legend />
-                          <Bar yAxisId="left" dataKey="expense" name="Expense" fill="#f97316" radius={[4, 4, 0, 0]} />
-                          <Bar yAxisId="left" dataKey="income" name="Income" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                          <Bar yAxisId="left" dataKey="expense" name="Expense" fill="#f97316" radius={[4, 4, 0, 0]} filter="url(#glow-orange)" />
+                          <Bar yAxisId="left" dataKey="income" name="Income" fill="#22c55e" radius={[4, 4, 0, 0]} filter="url(#glow-green)" />
                           <Line yAxisId="left" type="monotone" dataKey="cumulativeProfit" name="Cumulative P/L" stroke="#ec4899" strokeWidth={2} dot={{ fill: '#ec4899', r: 3 }} />
                         </ComposedChart>
                       </ResponsiveContainer>

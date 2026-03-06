@@ -578,6 +578,13 @@ export default function NEONERP() {
     loadCompany();
   }, []);
 
+  // Reload transactions when project filter changes in accounting menu
+  useEffect(() => {
+    if (activeMenu === 'accounting') {
+      loadTransactions(selectedProject);
+    }
+  }, [selectedProject, activeMenu]);
+
   const loadTransactions = async (projectId?: string) => {
     try {
       const url = `/api/transactions?projectId=${projectId || selectedProject}`;
@@ -4940,7 +4947,28 @@ export default function NEONERP() {
           {activeMenu === 'accounting' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-white">Accounting</h2>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-bold text-white">Accounting</h2>
+                  {/* Project Filter Combo Box */}
+                  <Select value={selectedProject} onValueChange={setSelectedProject}>
+                    <SelectTrigger className="w-[250px] bg-slate-800 border-slate-700">
+                      <SelectValue placeholder="Filter by Project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">📋 Semua Project</SelectItem>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
+                              {p.code}
+                            </Badge>
+                            <span>{p.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" className="border-slate-600" disabled={isVisitor} onClick={printTransactions}>
                     <Printer className="w-4 h-4 mr-2" />

@@ -7118,8 +7118,12 @@ Lanjutkan restore?`;
             </DialogTitle>
           </DialogHeader>
           <div className="py-6 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
-              <MessageCircle className="w-8 h-8 text-cyan-400" />
+            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border-2 border-cyan-500/30 shadow-lg shadow-cyan-500/20">
+              <img 
+                src="/logo-service.png" 
+                alt="Logo" 
+                className="w-20 h-20 object-contain"
+              />
             </div>
             <p className="text-slate-300 mb-4">
               Silahkan hubungi kami di nomor

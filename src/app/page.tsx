@@ -374,6 +374,11 @@ export default function NEONERP() {
   const [backupProgressComplete, setBackupProgressComplete] = useState(false);
   const [backupProgressError, setBackupProgressError] = useState<string | null>(null);
 
+  // PDF Export state
+  const [showPdfDialog, setShowPdfDialog] = useState(false);
+  const [pdfPageSize, setPdfPageSize] = useState<string>('A4');
+  const [pdfExporting, setPdfExporting] = useState(false);
+
   // Effect to update time every second
   useEffect(() => {
     const timer = setInterval(() => {
@@ -1344,6 +1349,19 @@ export default function NEONERP() {
     const printContent = document.getElementById('print-transactions');
     if (!printContent) return;
     
+    // Clone the content and remove Actions column
+    const clonedContent = printContent.cloneNode(true) as HTMLElement;
+    
+    // Remove the Actions header and cells (last column)
+    const allRows = clonedContent.querySelectorAll('tr');
+    allRows.forEach((row) => {
+      const cells = row.querySelectorAll('th, td');
+      if (cells.length > 0) {
+        // Remove the last cell (Actions column)
+        cells[cells.length - 1].remove();
+      }
+    });
+    
     // Logo size - auto adjusted
     const logoSize = 80;
     const logoSrc = company?.logo || '/logo.png';
@@ -1499,7 +1517,7 @@ export default function NEONERP() {
             <p>Periode: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
           
-          ${printContent.innerHTML}
+          ${clonedContent.innerHTML}
           
           <div class="signature-section">
             <div class="signature-box">
@@ -1513,6 +1531,62 @@ export default function NEONERP() {
     `);
     printWindow.document.close();
     printWindow.print();
+  };
+
+  // Save transactions as PDF function
+  const saveTransactionsPDF = async () => {
+    if (transactions.length === 0) {
+      toast({ title: 'Error', description: 'Tidak ada transaksi untuk disimpan', variant: 'destructive' });
+      return;
+    }
+
+    setPdfExporting(true);
+
+    try {
+      const projectName = selectedProject === 'all' 
+        ? 'Semua Project' 
+        : projects.find(p => p.id === selectedProject)?.name || 'Project';
+
+      const response = await fetch('/api/pdf/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transactions: transactions.slice(0, 20), // Limit to 20 transactions
+          company: company,
+          projectName: projectName,
+          pageSize: pdfPageSize,
+          orientation: 'portrait', // Always force portrait
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate PDF');
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Laporan_Transaksi_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({ title: 'Success', description: 'PDF berhasil disimpan' });
+      setShowPdfDialog(false);
+    } catch (error: any) {
+      console.error('PDF export error:', error);
+      toast({ title: 'Error', description: error.message || 'Gagal menyimpan PDF', variant: 'destructive' });
+    } finally {
+      setPdfExporting(false);
+    }
   };
 
   const printRAB = (project: Project) => {
@@ -4974,6 +5048,68 @@ export default function NEONERP() {
                     <Printer className="w-4 h-4 mr-2" />
                     Print Report
                   </Button>
+                  <Dialog open={showPdfDialog} onOpenChange={setShowPdfDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="border-slate-600" disabled={isVisitor || transactions.length === 0}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Save Transaksi
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-slate-900 border-slate-700">
+                      <DialogHeader>
+                        <DialogTitle className="text-white">Save Transaksi as PDF</DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                          Pilih ukuran halaman untuk menyimpan laporan transaksi
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Ukuran Halaman</Label>
+                          <Select value={pdfPageSize} onValueChange={setPdfPageSize}>
+                            <SelectTrigger className="bg-slate-800 border-slate-700">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
+                              <SelectItem value="Letter">Letter (216 × 279 mm)</SelectItem>
+                              <SelectItem value="Legal">Legal (216 × 356 mm)</SelectItem>
+                              <SelectItem value="A3">A3 (297 × 420 mm)</SelectItem>
+                              <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+                          <div className="flex items-center gap-2 text-cyan-400 text-sm">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>Orientasi: Portrait (Tegak)</span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">
+                            File PDF akan disimpan secara otomatis ke folder download komputer Anda
+                          </p>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowPdfDialog(false)}>Cancel</Button>
+                        <Button 
+                          className="btn-neon" 
+                          onClick={saveTransactionsPDF} 
+                          disabled={pdfExporting}
+                        >
+                          {pdfExporting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Menyimpan...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-4 h-4 mr-2" />
+                              Save PDF
+                            </>
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   <Dialog open={showTransactionDialog} onOpenChange={setShowTransactionDialog}>
                     <DialogTrigger asChild>
                       <Button className="btn-neon" disabled={isVisitor} onClick={() => { setEditingId(null); setTransactionForm({ projectId: selectedProject !== 'all' ? selectedProject : '', type: 'Expense', date: new Date().toISOString().split('T')[0] }); }}>

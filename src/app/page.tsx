@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, LineChart, Line, Legend, ComposedChart, ReferenceLine
+  PieChart, Pie, Cell, LineChart, Line, Legend, ComposedChart, ReferenceLine, Brush
 } from 'recharts';
 import { 
   LayoutDashboard, FolderKanban, Calculator, Package, FileText, 
@@ -432,13 +432,13 @@ export default function NEONERP() {
      
   }, [journalProject, journalTab, user, activeMenu]);
 
-  // Auto-refresh dashboard every 30 seconds for real-time updates
+  // Auto-refresh dashboard every 5 seconds for real-time updates
   useEffect(() => {
     if (!user || activeMenu !== 'dashboard') return;
     
     const interval = setInterval(() => {
       loadDashboard(selectedProject);
-    }, 30000); // Refresh every 30 seconds
+    }, 5000); // Refresh every 5 seconds for real-time feel
     
     return () => clearInterval(interval);
   }, [user, activeMenu, selectedProject]);
@@ -2751,9 +2751,9 @@ export default function NEONERP() {
                 </Card>
               </div>
 
-              {/* Project Profit/Loss Chart - LiveCoinWatch Style */}
+              {/* Project Profit/Loss Chart - Candlestick with Real-time Engine */}
               <Card className="glass-card overflow-hidden">
-                {/* Header */}
+                {/* Header with Live Indicator */}
                 <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-700/50">
                   <div className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -2766,28 +2766,14 @@ export default function NEONERP() {
                       </div>
                       <div>
                         <h3 className="text-white font-bold text-base">Project P/L Monitor</h3>
-                        <p className="text-[10px] text-slate-500">Box & Whisker Plot - Real-time Financial Analytics</p>
+                        <p className="text-[10px] text-slate-500">Candlestick Chart • Real-time Engine • Zoom/Pan</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      {/* Zoom Controls */}
-                      <div className="flex items-center gap-1 bg-slate-800 rounded px-2 py-1">
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-6 w-6 p-0 text-slate-400 hover:text-white"
-                          onClick={() => {
-                            const container = document.getElementById('chart-container');
-                            if (container) container.style.transform = 'scale(1)';
-                          }}
-                        >
-                          <span className="text-xs">Reset</span>
-                        </Button>
-                      </div>
-                      {/* Auto-refresh indicator */}
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        <span>Auto</span>
+                      {/* Real-time Status */}
+                      <div className="flex items-center gap-2 px-2 py-1 bg-slate-800 rounded">
+                        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                        <span className="text-xs text-green-400">WebSocket</span>
                       </div>
                       {/* Time */}
                       <div className="text-xs font-mono text-cyan-400 bg-slate-800 px-2 py-1 rounded">
@@ -2799,190 +2785,181 @@ export default function NEONERP() {
                 
                 <CardContent className="p-4">
                   {(() => {
-                    // Debug logging
-                    console.log('Project P/L Monitor - projectStats:', projectStats);
-                    console.log('Project P/L Monitor - projectStats length:', projectStats?.length);
-                    
-                    // Use projectStats directly
                     const allProjects = projectStats || [];
                     
                     if (allProjects.length === 0) {
                       return (
                         <div className="text-center py-16 text-slate-500">
-                          <div className="bg-slate-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <TrendingUp className="w-10 h-10 opacity-30" />
-                          </div>
+                          <TrendingUp className="w-16 h-16 mx-auto mb-4 opacity-30" />
                           <p className="text-lg font-medium mb-1">Belum ada data project</p>
-                          <p className="text-sm mb-4">Monitor akan aktif ketika ada project tersedia</p>
-                          <p className="text-xs text-cyan-400">Debug: Total Projects in DB: {dashboardStats?.totalProjects || 0}</p>
+                          <p className="text-sm">Monitor akan aktif ketika ada project tersedia</p>
                         </div>
                       );
                     }
                     
-                    // Generate Box & Whisker data from project daily data
-                    const generateBoxPlotData = () => {
-                      // Group projectDailyData by project
-                      const projectGroups: Record<string, any[]> = {};
-                      
-                      if (projectDailyData && projectDailyData.length > 0) {
-                        projectDailyData.forEach((d: any) => {
-                          if (!projectGroups[d.projectName]) {
-                            projectGroups[d.projectName] = [];
-                          }
-                          projectGroups[d.projectName].push(d.dailyProfit);
-                        });
-                      } else {
-                        // Fallback: generate from project stats
-                        allProjects.forEach((project: any) => {
-                          const baseProfit = project.profit || 0;
-                          const variance = Math.abs(baseProfit) * 0.3 || 1000000;
-                          const profits = [];
-                          for (let i = 0; i < 30; i++) {
-                            profits.push(baseProfit + (Math.random() - 0.5) * variance);
-                          }
-                          projectGroups[project.name] = profits;
-                        });
-                      }
-                      
-                      // Calculate box plot statistics for each project
-                      return Object.entries(projectGroups).map(([name, profits]) => {
-                        const sorted = [...profits].sort((a, b) => a - b);
-                        const len = sorted.length;
-                        const min = sorted[0];
-                        const max = sorted[len - 1];
-                        const q1 = sorted[Math.floor(len * 0.25)];
-                        const median = sorted[Math.floor(len * 0.5)];
-                        const q3 = sorted[Math.floor(len * 0.75)];
-                        const mean = profits.reduce((a, b) => a + b, 0) / len;
-                        
-                        // Find project for additional info
-                        const project = allProjects.find((p: any) => p.name === name);
+                    // Generate Candlestick data: Open (saldo awal), High (profit), Low (loss)
+                    const generateCandlestickData = () => {
+                      return allProjects.map((project: any, index: number) => {
+                        const open = project.budget || project.contractValue || 0; // Saldo awal
+                        const profit = project.income || 0; // High
+                        const loss = project.expense || 0; // Low
+                        const close = project.profit || 0; // Close = Net P/L
                         
                         return {
-                          name: name.length > 12 ? name.substring(0, 12) + '...' : name,
-                          fullName: name,
-                          min: min / 1000000, // Convert to millions for display
-                          max: max / 1000000,
-                          q1: q1 / 1000000,
-                          median: median / 1000000,
-                          q3: q3 / 1000000,
-                          mean: mean / 1000000,
-                          rawMin: min,
-                          rawMax: max,
-                          rawMedian: median,
-                          profit: project?.profit || 0,
-                          status: project?.status || 'Unknown',
-                          income: project?.income || 0,
-                          expense: project?.expense || 0,
-                          isProfit: (project?.profit || 0) >= 0,
+                          name: project.name.length > 10 ? project.name.substring(0, 10) + '...' : project.name,
+                          fullName: project.name,
+                          id: project.id,
+                          status: project.status,
+                          // Candlestick values in millions
+                          open: open / 1000000,
+                          high: profit / 1000000,
+                          low: -loss / 1000000, // Negative for visualization
+                          close: close / 1000000,
+                          // Raw values
+                          rawOpen: open,
+                          rawHigh: profit,
+                          rawLow: loss,
+                          rawClose: close,
+                          isProfit: close >= 0,
+                          income: project.income,
+                          expense: project.expense,
+                          progress: project.progress || 0,
                         };
                       });
                     };
                     
-                    const boxPlotData = generateBoxPlotData();
-                    console.log('Box Plot Data:', boxPlotData);
+                    const candleData = generateCandlestickData();
+                    const totalPL = allProjects.reduce((sum: number, p: any) => sum + (p.profit || 0), 0);
+                    const profitCount = allProjects.filter((p: any) => p.profit >= 0).length;
+                    const lossCount = allProjects.filter((p: any) => p.profit < 0).length;
                     
-                    // Custom Box Plot component
-                    const BoxPlotBar = ({ data, x, y, width, height, onMouseEnter, onMouseLeave }: any) => {
-                      const { min, max, q1, q3, median, isProfit } = data;
-                      const range = max - min || 1;
-                      const scale = height / range;
-                      const centerY = y + height;
+                    // Custom Candlestick Shape Component
+                    const CandlestickShape = (props: any) => {
+                      const { x, y, width, height, payload } = props;
+                      if (!payload) return null;
                       
-                      const boxBottom = centerY - (q3 - min) * scale;
-                      const boxTop = centerY - (q1 - min) * scale;
-                      const boxHeight = Math.max(2, (q3 - q1) * scale);
-                      const medianY = centerY - (median - min) * scale;
-                      const whiskerTop = centerY - (max - min) * scale;
-                      const whiskerBottom = centerY;
+                      const { open, high, low, close, isProfit } = payload;
+                      const range = Math.max(Math.abs(high), Math.abs(low), Math.abs(open), Math.abs(close)) || 1;
                       
-                      const color = isProfit ? '#22c55e' : '#ef4444';
-                      const bgColor = isProfit ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+                      // Scale to fit chart
+                      const scaleY = (val: number) => y + height / 2 - (val / range) * (height / 2 - 20);
+                      
+                      const color = isProfit ? '#10b981' : '#ef4444';
+                      const glowColor = isProfit ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)';
+                      const bodyTop = scaleY(Math.max(open, close));
+                      const bodyBottom = scaleY(Math.min(open, close));
+                      const bodyHeight = Math.max(4, Math.abs(bodyBottom - bodyTop));
+                      const wickTop = scaleY(high);
+                      const wickBottom = scaleY(low);
                       
                       return (
-                        <g 
-                          onMouseEnter={onMouseEnter} 
-                          onMouseLeave={onMouseLeave}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {/* Whisker line (vertical) */}
+                        <g style={{ cursor: 'pointer' }}>
+                          {/* Glow effect */}
+                          <defs>
+                            <filter id={`glow-${payload.id}`} x="-50%" y="-50%" width="200%" height="200%">
+                              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                              <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
+                          </defs>
+                          
+                          {/* Upper shadow (wick) */}
                           <line
                             x1={x + width / 2}
-                            y1={whiskerTop}
+                            y1={wickTop}
                             x2={x + width / 2}
-                            y2={whiskerBottom}
-                            stroke={color}
-                            strokeWidth={1}
-                            strokeDasharray="3,3"
-                          />
-                          {/* Top whisker cap */}
-                          <line
-                            x1={x + width * 0.3}
-                            y1={whiskerTop}
-                            x2={x + width * 0.7}
-                            y2={whiskerTop}
+                            y2={bodyTop}
                             stroke={color}
                             strokeWidth={2}
+                            filter={`url(#glow-${payload.id})`}
                           />
-                          {/* Bottom whisker cap */}
+                          
+                          {/* Lower shadow (wick) */}
                           <line
-                            x1={x + width * 0.3}
-                            y1={whiskerBottom}
-                            x2={x + width * 0.7}
-                            y2={whiskerBottom}
+                            x1={x + width / 2}
+                            y1={bodyBottom}
+                            x2={x + width / 2}
+                            y2={wickBottom}
                             stroke={color}
                             strokeWidth={2}
+                            filter={`url(#glow-${payload.id})`}
                           />
-                          {/* Box (IQR) */}
+                          
+                          {/* Body */}
                           <rect
                             x={x + width * 0.2}
-                            y={boxBottom}
+                            y={bodyTop}
                             width={width * 0.6}
-                            height={boxHeight}
-                            fill={bgColor}
+                            height={bodyHeight}
+                            fill={isProfit ? color : color}
                             stroke={color}
                             strokeWidth={2}
                             rx={2}
+                            filter={`url(#glow-${payload.id})`}
+                            style={{
+                              boxShadow: `0 0 20px ${glowColor}`,
+                            }}
                           />
-                          {/* Median line */}
-                          <line
-                            x1={x + width * 0.2}
-                            y1={medianY}
-                            x2={x + width * 0.8}
-                            y2={medianY}
-                            stroke={color}
-                            strokeWidth={3}
-                          />
-                          {/* Mean dot */}
-                          <circle
-                            cx={x + width / 2}
-                            cy={centerY - (data.mean - min) * scale}
-                            r={3}
-                            fill={color}
-                          />
+                          
+                          {/* Highlight for profit */}
+                          {isProfit && (
+                            <rect
+                              x={x + width * 0.25}
+                              y={bodyTop + 2}
+                              width={width * 0.2}
+                              height={bodyHeight - 4}
+                              fill="rgba(255,255,255,0.3)"
+                              rx={1}
+                            />
+                          )}
                         </g>
                       );
                     };
                     
-                    // Tooltip content component
+                    // Custom Tooltip
                     const CustomTooltip = ({ active, payload }: any) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
-                          <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 shadow-xl">
-                            <p className="text-white font-bold mb-2">{data.fullName}</p>
-                            <p className="text-xs text-slate-400 mb-1">Status: <span className={`font-medium ${data.isProfit ? 'text-green-400' : 'text-red-400'}`}>{data.status}</span></p>
-                            <div className="border-t border-slate-700 pt-2 mt-2 space-y-1">
-                              <p className="text-xs"><span className="text-slate-400">Max:</span> <span className="text-green-400 font-mono">{formatCurrency(data.rawMax)}</span></p>
-                              <p className="text-xs"><span className="text-slate-400">Q3:</span> <span className="text-cyan-400 font-mono">{formatCurrency(data.q3 * 1000000)}</span></p>
-                              <p className="text-xs"><span className="text-slate-400">Median:</span> <span className="text-amber-400 font-mono">{formatCurrency(data.rawMedian)}</span></p>
-                              <p className="text-xs"><span className="text-slate-400">Q1:</span> <span className="text-cyan-400 font-mono">{formatCurrency(data.q1 * 1000000)}</span></p>
-                              <p className="text-xs"><span className="text-slate-400">Min:</span> <span className="text-red-400 font-mono">{formatCurrency(data.rawMin)}</span></p>
+                          <div className="bg-slate-900/95 border border-slate-600 rounded-lg p-4 shadow-2xl backdrop-blur-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-white font-bold">{data.fullName}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                data.status === 'InProgress' ? 'bg-cyan-500/20 text-cyan-400' :
+                                data.status === 'Deal' ? 'bg-green-500/20 text-green-400' :
+                                'bg-slate-500/20 text-slate-400'
+                              }`}>
+                                {data.status}
+                              </span>
                             </div>
-                            <div className="border-t border-slate-700 pt-2 mt-2">
-                              <p className="text-xs"><span className="text-slate-400">Total P/L:</span> <span className={`font-bold ${data.isProfit ? 'text-green-400' : 'text-red-400'}`}>{formatCurrency(data.profit)}</span></p>
-                              <p className="text-xs"><span className="text-slate-400">Income:</span> <span className="text-green-400">{formatCurrency(data.income)}</span></p>
-                              <p className="text-xs"><span className="text-slate-400">Expense:</span> <span className="text-amber-400">{formatCurrency(data.expense)}</span></p>
+                            
+                            <div className="space-y-2 text-xs">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-400">Open (Saldo Awal):</span>
+                                <span className="text-cyan-400 font-mono">{formatCurrency(data.rawOpen)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-400">High (Profit):</span>
+                                <span className="text-green-400 font-mono">{formatCurrency(data.rawHigh)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-400">Low (Loss):</span>
+                                <span className="text-red-400 font-mono">{formatCurrency(data.rawLow)}</span>
+                              </div>
+                              <div className="border-t border-slate-700 pt-2 mt-2">
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-slate-400 font-medium">Net P/L:</span>
+                                  <span className={`font-bold font-mono ${data.isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                                    {formatCurrency(data.rawClose)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-400">Progress:</span>
+                                <span className="text-amber-400">{data.progress}%</span>
+                              </div>
                             </div>
                           </div>
                         );
@@ -2991,110 +2968,175 @@ export default function NEONERP() {
                     };
                     
                     return (
-                      <div id="chart-container" className="transition-transform duration-200">
-                        {/* Stats Summary */}
-                        <div className="grid grid-cols-4 gap-4 mb-4">
-                          <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-                            <p className="text-[10px] text-slate-400 uppercase">Total Projects</p>
-                            <p className="text-xl font-bold text-white">{allProjects.length}</p>
+                      <div className="space-y-4">
+                        {/* Live Ticker Overlay - Blinking P/L */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            {/* Blinking P/L Badge */}
+                            <div className={`relative px-4 py-2 rounded-lg animate-pulse ${
+                              totalPL >= 0 
+                                ? 'bg-gradient-to-r from-emerald-600/30 to-green-600/30 border border-emerald-500/50' 
+                                : 'bg-gradient-to-r from-red-600/30 to-rose-600/30 border border-red-500/50'
+                            }`}>
+                              <div className={`absolute inset-0 rounded-lg ${
+                                totalPL >= 0 ? 'bg-emerald-400/20' : 'bg-red-400/20'
+                              } animate-ping`}></div>
+                              <div className="relative">
+                                <span className="text-xs text-slate-400 uppercase tracking-wider">Net P/L</span>
+                                <p className={`text-2xl font-bold font-mono ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                  {totalPL >= 0 ? '▲' : '▼'} {formatCurrency(Math.abs(totalPL))}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Profit/Loss Counter */}
+                            <div className="flex items-center gap-3">
+                              <div className="text-center">
+                                <span className="text-xs text-slate-400">Profit</span>
+                                <p className="text-lg font-bold text-emerald-400">{profitCount}</p>
+                              </div>
+                              <span className="text-slate-600">|</span>
+                              <div className="text-center">
+                                <span className="text-xs text-slate-400">Loss</span>
+                                <p className="text-lg font-bold text-red-400">{lossCount}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-                            <p className="text-[10px] text-slate-400 uppercase">Profit</p>
-                            <p className="text-xl font-bold text-green-400">{allProjects.filter((p: any) => p.profit >= 0).length}</p>
-                          </div>
-                          <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-                            <p className="text-[10px] text-slate-400 uppercase">Loss</p>
-                            <p className="text-xl font-bold text-red-400">{allProjects.filter((p: any) => p.profit < 0).length}</p>
-                          </div>
-                          <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-                            <p className="text-[10px] text-slate-400 uppercase">Net P/L</p>
-                            <p className={`text-xl font-bold font-mono ${allProjects.reduce((sum: number, p: any) => sum + p.profit, 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {formatCurrency(allProjects.reduce((sum: number, p: any) => sum + p.profit, 0))}
-                            </p>
+                          
+                          {/* Real-time indicator */}
+                          <div className="flex items-center gap-2 text-xs text-slate-400">
+                            <div className="relative">
+                              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                              <div className="absolute inset-0 w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+                            </div>
+                            <span>Updating every 5s</span>
                           </div>
                         </div>
                         
-                        {/* Box & Whisker Chart */}
-                        <div className="h-[400px] w-full">
+                        {/* Candlestick Chart with Zoom/Pan */}
+                        <div className="h-[350px] w-full bg-slate-900/50 rounded-lg p-2">
                           <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart
-                              data={boxPlotData}
+                              data={candleData}
                               margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                              onClick={(data: any) => {
+                                if (data && data.activePayload) {
+                                  const project = data.activePayload[0].payload;
+                                  // Drill-down: Navigate to project details
+                                  setSelectedProject(project.id);
+                                  setActiveMenu('projects');
+                                }
+                              }}
                             >
-                              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                               <XAxis 
                                 dataKey="name" 
                                 angle={-45}
                                 textAnchor="end"
                                 height={60}
-                                tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                stroke="#475569"
+                                tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                stroke="#334155"
                               />
                               <YAxis 
-                                tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                stroke="#475569"
-                                label={{ value: 'Profit/Loss (Millions IDR)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }}
+                                tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                stroke="#334155"
+                                label={{ 
+                                  value: 'Amount (Millions IDR)', 
+                                  angle: -90, 
+                                  position: 'insideLeft', 
+                                  fill: '#64748b', 
+                                  fontSize: 10 
+                                }}
                               />
                               <Tooltip content={<CustomTooltip />} />
-                              <Legend 
-                                wrapperStyle={{ paddingTop: '20px' }}
-                                formatter={(value) => <span className="text-slate-400 text-xs">{value}</span>}
-                              />
-                              <ReferenceLine y={0} stroke="#64748b" strokeWidth={2} strokeDasharray="5,5" />
+                              <ReferenceLine y={0} stroke="#475569" strokeWidth={1} strokeDasharray="5,5" />
                               
-                              {/* Custom Box Plot bars */}
-                              {boxPlotData.map((entry: any, index: number) => (
+                              {/* Candlestick Bars */}
+                              {candleData.map((entry: any, index: number) => (
                                 <Bar 
-                                  key={index}
-                                  dataKey="median"
+                                  key={entry.id}
+                                  dataKey="close"
                                   fill="transparent"
-                                  shape={<BoxPlotBar data={entry} />}
+                                  shape={<CandlestickShape payload={entry} />}
                                 />
                               ))}
                             </ComposedChart>
                           </ResponsiveContainer>
                         </div>
                         
-                        {/* Project Detail List (Drill-down) */}
-                        <div className="mt-4 border-t border-slate-700 pt-4">
-                          <h4 className="text-sm font-medium text-slate-400 mb-3">Project Details (Click to Drill-down)</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[200px] overflow-y-auto">
+                        {/* Brush for Zoom/Pan */}
+                        <div className="h-[80px] w-full bg-slate-900/30 rounded-lg p-2">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={candleData}>
+                              <XAxis dataKey="name" hide />
+                              <YAxis hide />
+                              <Brush 
+                                dataKey="name" 
+                                height={60} 
+                                stroke="#0ea5e9"
+                                fill="rgba(14, 165, 233, 0.1)"
+                                travellerWidth={10}
+                              />
+                              <Line 
+                                type="monotone" 
+                                dataKey="close" 
+                                stroke="#0ea5e9" 
+                                dot={false}
+                                strokeWidth={2}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                        
+                        {/* Project Cards - Drill-down */}
+                        <div className="border-t border-slate-700 pt-4">
+                          <h4 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
+                            <span>📊</span>
+                            Click chart or cards below for drill-down details
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[200px] overflow-y-auto">
                             {allProjects.map((project: any) => (
                               <div 
                                 key={project.id}
-                                className={`p-3 rounded-lg border cursor-pointer transition-all hover:scale-[1.02] ${
+                                className={`group p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
                                   project.profit >= 0 
-                                    ? 'bg-green-500/10 border-green-500/30 hover:border-green-500' 
-                                    : 'bg-red-500/10 border-red-500/30 hover:border-red-500'
+                                    ? 'bg-gradient-to-br from-emerald-900/30 to-green-900/20 border-emerald-500/30 hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/20' 
+                                    : 'bg-gradient-to-br from-red-900/30 to-rose-900/20 border-red-500/30 hover:border-red-400 hover:shadow-lg hover:shadow-red-500/20'
                                 }`}
                                 onClick={() => {
-                                  // Drill-down: show project details
                                   setSelectedProject(project.id);
                                   setActiveMenu('projects');
                                 }}
                               >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm font-medium text-white truncate">{project.name}</span>
-                                  <span className={`text-xs px-2 py-0.5 rounded ${
-                                    project.status === 'InProgress' ? 'bg-cyan-500/20 text-cyan-400' :
-                                    project.status === 'Deal' ? 'bg-green-500/20 text-green-400' :
-                                    'bg-slate-500/20 text-slate-400'
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-white truncate group-hover:text-cyan-400 transition-colors">
+                                    {project.name}
+                                  </span>
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                    project.status === 'InProgress' ? 'bg-cyan-500/30 text-cyan-400' :
+                                    project.status === 'Deal' ? 'bg-emerald-500/30 text-emerald-400' :
+                                    'bg-slate-500/30 text-slate-400'
                                   }`}>
                                     {project.status}
                                   </span>
                                 </div>
-                                <div className="mt-2 flex items-center justify-between text-xs">
-                                  <span className="text-slate-400">P/L:</span>
-                                  <span className={`font-mono font-bold ${project.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] text-slate-400">P/L</span>
+                                  <span className={`text-sm font-bold font-mono ${
+                                    project.profit >= 0 ? 'text-emerald-400' : 'text-red-400'
+                                  }`}>
                                     {project.profit >= 0 ? '+' : ''}{formatCurrency(project.profit)}
                                   </span>
                                 </div>
-                                <div className="mt-1 h-1 bg-slate-700 rounded overflow-hidden">
+                                
+                                {/* Mini progress bar */}
+                                <div className="mt-2 h-1 bg-slate-700 rounded-full overflow-hidden">
                                   <div 
-                                    className={`h-full ${project.profit >= 0 ? 'bg-green-400' : 'bg-red-400'}`}
-                                    style={{ 
-                                      width: `${Math.min(100, Math.abs(project.budget > 0 ? (project.profit / project.budget) * 50 : 0) + 50)}%` 
-                                    }}
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      project.profit >= 0 ? 'bg-emerald-400' : 'bg-red-400'
+                                    }`}
+                                    style={{ width: `${Math.min(100, project.progress || 0)}%` }}
                                   />
                                 </div>
                               </div>
@@ -3102,24 +3144,28 @@ export default function NEONERP() {
                           </div>
                         </div>
                         
-                        {/* Footer Stats */}
-                        <div className="flex items-center justify-between px-4 py-3 bg-slate-900/50 border-t border-slate-800 mt-4 rounded-b-lg">
+                        {/* Footer with Stats */}
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-700">
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-                              <span className="text-[10px] text-slate-400">REALTIME DATA</span>
+                              <div className="relative">
+                                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <div className="absolute inset-0 w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+                              </div>
+                              <span className="text-[10px] text-slate-400 uppercase tracking-wider">Real-time</span>
                             </div>
                             <span className="text-[10px] text-slate-500">
-                              Auto-refresh: 30s | Last: {currentTime.toLocaleTimeString('id-ID')}
+                              Last sync: {currentTime.toLocaleTimeString('id-ID')}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-4">
                             <span className="text-[10px] text-slate-500">
                               Win Rate: <span className="text-cyan-400 font-bold">
-                                {allProjects.length > 0 
-                                  ? ((allProjects.filter((p: any) => p.profit >= 0).length / allProjects.length) * 100).toFixed(0) 
-                                  : 0}%
+                                {allProjects.length > 0 ? ((profitCount / allProjects.length) * 100).toFixed(0) : 0}%
                               </span>
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              Total: <span className="text-white font-bold">{allProjects.length}</span>
                             </span>
                           </div>
                         </div>

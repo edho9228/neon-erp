@@ -3102,6 +3102,68 @@ export default function NEONERP() {
                           </div>
                         </div>
                         
+                        {/* Chart Legend - Penjelasan Warna */}
+                        <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700 mb-4">
+                          <p className="text-xs text-slate-400 font-medium mb-3 uppercase tracking-wider">📊 Keterangan Grafik Candlestick:</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* Body Colors - Profit/Loss */}
+                            <div className="space-y-2">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Warna Body (Profit/Loss)</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-4 rounded bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse"></div>
+                                <span className="text-xs text-emerald-400 font-bold">PROFIT ▲</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-4 rounded bg-red-500 shadow-lg shadow-red-500/50 animate-pulse"></div>
+                                <span className="text-xs text-red-400 font-bold">LOSS ▼</span>
+                              </div>
+                            </div>
+                            
+                            {/* Border Colors - Status */}
+                            <div className="space-y-2">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Warna Border (Status)</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-4 rounded border-2 border-cyan-400 bg-cyan-500/20 shadow-lg shadow-cyan-500/30"></div>
+                                <span className="text-xs text-cyan-400 font-medium">In Progress</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-4 rounded border-2 border-emerald-400 bg-emerald-500/20 shadow-lg shadow-emerald-500/30"></div>
+                                <span className="text-xs text-emerald-400 font-medium">Deal</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-4 rounded border-2 border-amber-400 bg-amber-500/20 shadow-lg shadow-amber-500/30"></div>
+                                <span className="text-xs text-amber-400 font-medium">Negotiation</span>
+                              </div>
+                            </div>
+                            
+                            {/* Wick Meaning */}
+                            <div className="space-y-2">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Wick (Garis Vertikal)</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-1 h-6 bg-gradient-to-b from-emerald-400 to-green-400 rounded-full shadow-lg shadow-emerald-500/50"></div>
+                                <span className="text-xs text-slate-300">High = Income (Pendapatan)</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-1 h-6 bg-gradient-to-b from-red-400 to-rose-400 rounded-full shadow-lg shadow-red-500/50"></div>
+                                <span className="text-xs text-slate-300">Low = Expense (Pengeluaran)</span>
+                              </div>
+                            </div>
+                            
+                            {/* Special Indicators */}
+                            <div className="space-y-2">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Indikator Khusus</p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-4 h-4 rounded-full border-2 border-red-400 bg-red-500/30 animate-pulse shadow-lg shadow-red-500/30"></div>
+                                <span className="text-xs text-red-400">Loss Alert (Berkedip)</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-1 h-4 bg-gradient-to-b from-amber-400 to-yellow-400 shadow-lg shadow-amber-500/30"></div>
+                                <span className="text-xs text-amber-400">Schedule Line</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
                         {/* Candlestick Chart */}
                         <div className="h-[450px] w-full bg-slate-900/50 rounded-lg p-2">
                           <ResponsiveContainer width="100%" height="100%">

@@ -365,6 +365,15 @@ export default function NEONERP() {
   // Service dialog state
   const [showServiceDialog, setShowServiceDialog] = useState(false);
 
+  // Backup/Restore progress state
+  const [showBackupProgress, setShowBackupProgress] = useState(false);
+  const [backupProgressTitle, setBackupProgressTitle] = useState('');
+  const [backupProgressStatus, setBackupProgressStatus] = useState('');
+  const [backupProgressPercent, setBackupProgressPercent] = useState(0);
+  const [backupProgressLog, setBackupProgressLog] = useState<string[]>([]);
+  const [backupProgressComplete, setBackupProgressComplete] = useState(false);
+  const [backupProgressError, setBackupProgressError] = useState<string | null>(null);
+
   // Effect to update time every second
   useEffect(() => {
     const timer = setInterval(() => {
@@ -6691,14 +6700,74 @@ export default function NEONERP() {
                         <Button
                           className="w-full btn-neon"
                           onClick={async () => {
-                            try {
-                              toast({ title: 'Memproses...', description: 'Mengumpulkan data untuk backup' });
+                            // Initialize progress dialog
+                            setShowBackupProgress(true);
+                            setBackupProgressTitle('Backup Data');
+                            setBackupProgressStatus('Memulai proses backup...');
+                            setBackupProgressPercent(0);
+                            setBackupProgressLog([]);
+                            setBackupProgressComplete(false);
+                            setBackupProgressError(null);
 
+                            const addLog = (msg: string) => {
+                              setBackupProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+                            };
+
+                            try {
+                              addLog('Menghubungkan ke server...');
+                              setBackupProgressPercent(10);
+                              setBackupProgressStatus('Mengambil Company Profile...');
+                              
+                              await new Promise(r => setTimeout(r, 300));
+                              addLog('Mengambil Company Profile...');
+                              setBackupProgressPercent(20);
+                              
+                              setBackupProgressStatus('Mengambil data Users & Clients...');
+                              await new Promise(r => setTimeout(r, 300));
+                              addLog('Mengambil data Users & Clients...');
+                              setBackupProgressPercent(30);
+                              
+                              setBackupProgressStatus('Mengambil data Master Items...');
+                              await new Promise(r => setTimeout(r, 300));
+                              addLog('Mengambil data Master Items...');
+                              setBackupProgressPercent(40);
+                              
+                              setBackupProgressStatus('Mengambil data Projects & RAB...');
+                              await new Promise(r => setTimeout(r, 300));
+                              addLog('Mengambil data Projects & RAB...');
+                              setBackupProgressPercent(50);
+                              
+                              setBackupProgressStatus('Mengambil data Transactions (Project & Internal)...');
+                              await new Promise(r => setTimeout(r, 300));
+                              addLog('Mengambil data Transactions (Project & Internal)...');
+                              setBackupProgressPercent(60);
+                              
+                              setBackupProgressStatus('Mengambil data Budget Plans & Monthly Reports...');
+                              await new Promise(r => setTimeout(r, 300));
+                              addLog('Mengambil data Budget Plans & Monthly Reports...');
+                              setBackupProgressPercent(70);
+                              
+                              setBackupProgressStatus('Mengambil data Assets & Loans...');
+                              await new Promise(r => setTimeout(r, 300));
+                              addLog('Mengambil data Assets & Loans...');
+                              setBackupProgressPercent(80);
+                              
+                              setBackupProgressStatus('Mengambil data Purchase Orders & Tenders...');
+                              await new Promise(r => setTimeout(r, 300));
+                              addLog('Mengambil data Purchase Orders & Tenders...');
+                              setBackupProgressPercent(85);
+
+                              // Actual API call
                               const res = await fetch('/api/backup', { credentials: 'include' });
                               if (!res.ok) throw new Error('Failed to create backup');
 
                               const backupData = await res.json();
-
+                              setBackupProgressPercent(90);
+                              addLog('Data berhasil diambil dari server');
+                              
+                              setBackupProgressStatus('Membuat file backup...');
+                              addLog('Membuat file backup JSON...');
+                              
                               // Create and download file
                               const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                               const url = URL.createObjectURL(blob);
@@ -6710,9 +6779,16 @@ export default function NEONERP() {
                               document.body.removeChild(a);
                               URL.revokeObjectURL(url);
 
-                              toast({ title: 'Success', description: 'Backup berhasil didownload' });
+                              setBackupProgressPercent(100);
+                              addLog('✅ File backup berhasil didownload!');
+                              addLog(`Total: ${backupData.summary?.projects || 0} Projects, ${backupData.summary?.transactions || 0} Transactions, ${backupData.summary?.assets || 0} Assets`);
+                              setBackupProgressStatus('Backup selesai!');
+                              setBackupProgressComplete(true);
+
                             } catch (error: any) {
-                              toast({ title: 'Error', description: error.message || 'Gagal membuat backup', variant: 'destructive' });
+                              addLog(`❌ Error: ${error.message}`);
+                              setBackupProgressError(error.message || 'Gagal membuat backup');
+                              setBackupProgressStatus('Backup gagal!');
                             }
                           }}
                         >
@@ -6742,14 +6818,23 @@ export default function NEONERP() {
 
                               // Create restore function with chunked approach
                               const restoreWithChunks = async (backupData: any) => {
-                                const phases = ['clear', 'core', 'projects', 'transactions', 'assets', 'other'];
+                                const phases = [
+                                  { name: 'clear', label: 'Menghapus data lama...', data: 'Clear existing data' },
+                                  { name: 'core', label: 'Memulihkan Company, Items, Clients...', data: 'Company, Items, Clients' },
+                                  { name: 'projects', label: 'Memulihkan Projects & RAB...', data: 'Projects & RAB Items' },
+                                  { name: 'transactions', label: 'Memulihkan Transactions & Reports...', data: 'Transactions, Budget Plans, Reports' },
+                                  { name: 'assets', label: 'Memulihkan Assets...', data: 'Assets & Asset Loans' },
+                                  { name: 'other', label: 'Memulihkan data lainnya...', data: 'Purchase Orders, Tenders, Logs' },
+                                ];
                                 const results: any = {};
                                 
-                                for (const phase of phases) {
+                                for (let i = 0; i < phases.length; i++) {
+                                  const phase = phases[i];
                                   try {
-                                    toast({ title: `Restore: ${phase}...`, description: `Memproses fase ${phase}...` });
+                                    setBackupProgressStatus(phase.label);
+                                    const percent = Math.round(((i + 1) / phases.length) * 100);
                                     
-                                    const res = await fetch(`/api/backup?phase=${phase}`, {
+                                    const res = await fetch(`/api/backup?phase=${phase.name}`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify(backupData),
@@ -6758,14 +6843,17 @@ export default function NEONERP() {
 
                                     if (!res.ok) {
                                       const err = await res.json();
-                                      throw new Error(err.error || `Failed at phase ${phase}`);
+                                      throw new Error(err.error || `Failed at phase ${phase.name}`);
                                     }
                                     
                                     const result = await res.json();
                                     Object.assign(results, result.results);
-                                    console.log(`Phase ${phase} completed:`, result.results);
+                                    
+                                    setBackupProgressPercent(percent);
+                                    addLog(`✅ ${phase.data}: ${JSON.stringify(result.results)}`);
+                                    console.log(`Phase ${phase.name} completed:`, result.results);
                                   } catch (err: any) {
-                                    console.error(`Phase ${phase} error:`, err);
+                                    console.error(`Phase ${phase.name} error:`, err);
                                     throw err;
                                   }
                                 }
@@ -6773,12 +6861,13 @@ export default function NEONERP() {
                                 return results;
                               };
 
-                              try {
-                                // Validate file
-                                if (!file.name.endsWith('.json')) {
-                                  throw new Error('File harus berformat .json');
-                                }
+                              // Validate file
+                              if (!file.name.endsWith('.json')) {
+                                toast({ title: 'Error', description: 'File harus berformat .json', variant: 'destructive' });
+                                return;
+                              }
 
+                              try {
                                 const text = await file.text();
                                 
                                 // Validate JSON
@@ -6793,19 +6882,24 @@ export default function NEONERP() {
                                   throw new Error('Format file backup tidak valid - missing "data" property');
                                 }
 
-                                // Show backup info
+                                // Show backup info in confirm dialog
                                 const infoMsg = `Backup Info:
 Version: ${backupData.version || 'Unknown'}
 Date: ${backupData.backupDate ? new Date(backupData.backupDate).toLocaleString('id-ID') : 'Unknown'}
 Created by: ${backupData.createdBy || 'Unknown'}
 
 Projects: ${backupData.summary?.projects || 0}
+RAB Items: ${backupData.summary?.rabItems || 0}
 Clients: ${backupData.summary?.clients || 0}
 Items: ${backupData.summary?.items || 0}
 Transactions: ${backupData.summary?.transactions || 0}
+  - Project Journal: ${backupData.summary?.projectTransactions || 0}
+  - Internal Journal: ${backupData.summary?.internalTransactions || 0}
+Budget Plans: ${backupData.summary?.budgetPlans || 0}
+Monthly Reports: ${backupData.summary?.monthlyReports || 0}
 Assets: ${backupData.summary?.assets || 0}
 
-⚠️ Proses restore akan dilakukan bertahap.
+⚠️ Proses restore akan mengganti SEMUA data yang ada.
 Lanjutkan restore?`;
 
                                 // Confirm restore
@@ -6813,32 +6907,41 @@ Lanjutkan restore?`;
                                   return;
                                 }
 
+                                // Initialize progress dialog
+                                setShowBackupProgress(true);
+                                setBackupProgressTitle('Restore Data');
+                                setBackupProgressStatus('Memulai proses restore...');
+                                setBackupProgressPercent(0);
+                                setBackupProgressLog([]);
+                                setBackupProgressComplete(false);
+                                setBackupProgressError(null);
+
+                                const addLog = (msg: string) => {
+                                  setBackupProgressLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+                                };
+
+                                addLog(`File backup: ${file.name}`);
+                                addLog(`Version: ${backupData.version || 'Unknown'}`);
+                                addLog(`Backup Date: ${backupData.backupDate ? new Date(backupData.backupDate).toLocaleString('id-ID') : 'Unknown'}`);
+
                                 // Run chunked restore
                                 const finalResults = await restoreWithChunks(backupData);
 
-                                toast({ 
-                                  title: '✅ Restore Berhasil!', 
-                                  description: `Data berhasil di-restore:
-• ${finalResults.projects || 0} projects
-• ${finalResults.items || 0} items  
-• ${finalResults.clients || 0} clients
-• ${finalResults.transactions || 0} transactions
-• ${finalResults.assets || 0} assets
-• ${finalResults.rabItems || 0} RAB items` 
-                                });
+                                setBackupProgressPercent(100);
+                                addLog('✅ Restore berhasil!');
+                                setBackupProgressStatus('Restore selesai!');
+                                setBackupProgressComplete(true);
 
-                                // Reload data
+                                // Reload data after a delay
                                 setTimeout(() => {
                                   loadInitialData();
-                                }, 1000);
+                                }, 1500);
 
                               } catch (error: any) {
                                 console.error('Restore error:', error);
-                                toast({ 
-                                  title: '❌ Gagal Restore', 
-                                  description: error.message || 'Gagal restore data', 
-                                  variant: 'destructive' 
-                                });
+                                setBackupProgressError(error.message || 'Gagal restore data');
+                                setBackupProgressStatus('Restore gagal!');
+                                setBackupProgressLog(prev => [...prev, `❌ Error: ${error.message}`]);
                               }
 
                               // Reset file input
@@ -7157,6 +7260,93 @@ Lanjutkan restore?`;
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Backup/Restore Progress Dialog */}
+      <Dialog open={showBackupProgress} onOpenChange={setShowBackupProgress}>
+        <DialogContent className="bg-slate-900 border-cyan-500/30 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                <Database className="w-4 h-4 text-cyan-400" />
+              </div>
+              {backupProgressTitle}
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {backupProgressStatus}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-slate-400">
+                <span>Progress</span>
+                <span>{backupProgressPercent}%</span>
+              </div>
+              <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-300 rounded-full ${
+                    backupProgressError 
+                      ? 'bg-red-500' 
+                      : backupProgressComplete 
+                        ? 'bg-green-500' 
+                        : 'bg-gradient-to-r from-cyan-500 to-cyan-400'
+                  }`}
+                  style={{ width: `${backupProgressPercent}%` }}
+                >
+                  {!backupProgressComplete && !backupProgressError && backupProgressPercent > 0 && backupProgressPercent < 100 && (
+                    <div className="h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Log Area */}
+            <div className="bg-slate-800/50 rounded-lg p-3 max-h-60 overflow-y-auto border border-slate-700">
+              <div className="space-y-1 font-mono text-xs">
+                {backupProgressLog.map((log, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`${
+                      log.includes('✅') ? 'text-green-400' : 
+                      log.includes('❌') ? 'text-red-400' : 
+                      log.includes('Error') ? 'text-red-400' : 
+                      'text-slate-400'
+                    }`}
+                  >
+                    {log}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Status Indicator */}
+            {backupProgressComplete && (
+              <div className="flex items-center gap-2 text-green-400 bg-green-500/10 rounded-lg p-3 border border-green-500/30">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Proses berhasil diselesaikan!</span>
+              </div>
+            )}
+
+            {backupProgressError && (
+              <div className="flex items-center gap-2 text-red-400 bg-red-500/10 rounded-lg p-3 border border-red-500/30">
+                <AlertTriangle className="w-5 h-5" />
+                <span className="text-sm font-medium">Error: {backupProgressError}</span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowBackupProgress(false)}
+              disabled={!backupProgressComplete && !backupProgressError}
+            >
+              {backupProgressComplete ? 'Tutup' : backupProgressError ? 'Tutup' : 'Memproses...'}
             </Button>
           </DialogFooter>
         </DialogContent>

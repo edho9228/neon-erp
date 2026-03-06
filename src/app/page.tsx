@@ -362,6 +362,9 @@ export default function NEONERP() {
   const [showChangePinDialog, setShowChangePinDialog] = useState(false);
   const [changePinForm, setChangePinForm] = useState({ currentPin: '', newPin: '', confirmPin: '' });
 
+  // Service dialog state
+  const [showServiceDialog, setShowServiceDialog] = useState(false);
+
   // Effect to update time every second
   useEffect(() => {
     const timer = setInterval(() => {
@@ -2651,9 +2654,9 @@ export default function NEONERP() {
       )}
 
       {/* Main Content Area - with top margin for fixed header + marquee + project selector */}
-      <main className="flex-1 flex flex-col overflow-hidden mt-36">
+      <main className="flex-1 flex flex-col overflow-hidden mt-36 pb-10">
         {/* Content */}
-        <ScrollArea className="flex-1 p-6">
+        <ScrollArea className="flex-1 p-6 pb-8">
           {/* Dashboard */}
           {activeMenu === 'dashboard' && (
             <div className="space-y-6">
@@ -2882,54 +2885,72 @@ export default function NEONERP() {
                       const wickTop = scaleY(high);
                       const wickBottom = scaleY(low);
                       
+                      // Loss glow is more intense red
+                      const lossGlowColor = '#ef4444';
+                      const lossGlowFilter = isProfit ? '3' : '6'; // Stronger glow for loss
+                      const wickColor = isProfit ? categoryColor : lossGlowColor;
+                      
                       return (
                         <g style={{ cursor: 'pointer' }}>
-                          {/* Glow effect */}
+                          {/* Glow effect - stronger for loss */}
                           <defs>
-                            <filter id={`glow-${payload.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                            <filter id={`glow-${payload.id}`} x="-100%" y="-100%" width="300%" height="300%">
+                              <feGaussianBlur stdDeviation={lossGlowFilter} result="coloredBlur"/>
                               <feMerge>
                                 <feMergeNode in="coloredBlur"/>
                                 <feMergeNode in="SourceGraphic"/>
                               </feMerge>
                             </filter>
+                            {/* Extra glow layer for loss */}
+                            {!isProfit && (
+                              <filter id={`glow-loss-${payload.id}`} x="-150%" y="-150%" width="400%" height="400%">
+                                <feGaussianBlur stdDeviation="10" result="coloredBlur"/>
+                                <feFlood floodColor="#ef4444" floodOpacity="0.5" result="glowColor"/>
+                                <feComposite in="glowColor" in2="coloredBlur" operator="in" result="softGlow"/>
+                                <feMerge>
+                                  <feMergeNode in="softGlow"/>
+                                  <feMergeNode in="coloredBlur"/>
+                                  <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                              </filter>
+                            )}
                           </defs>
                           
-                          {/* Upper shadow (wick) - Category color */}
+                          {/* Upper shadow (wick) - Red for loss, category color for profit */}
                           <line
                             x1={x + width / 2}
                             y1={wickTop}
                             x2={x + width / 2}
                             y2={bodyTop}
-                            stroke={categoryColor}
+                            stroke={wickColor}
                             strokeWidth={2}
                             filter={`url(#glow-${payload.id})`}
                           />
                           
-                          {/* Lower shadow (wick) - Category color */}
+                          {/* Lower shadow (wick) - Red for loss, category color for profit */}
                           <line
                             x1={x + width / 2}
                             y1={bodyBottom}
                             x2={x + width / 2}
                             y2={wickBottom}
-                            stroke={categoryColor}
+                            stroke={wickColor}
                             strokeWidth={2}
                             filter={`url(#glow-${payload.id})`}
                           />
                           
-                          {/* Body - Profit/Loss color */}
+                          {/* Body - Profit/Loss color with strong glow for loss */}
                           <rect
                             x={x + width * 0.2}
                             y={bodyTop}
                             width={width * 0.6}
                             height={bodyHeight}
                             fill={bodyColor}
-                            stroke={categoryColor}
-                            strokeWidth={2}
+                            stroke={isProfit ? categoryColor : '#ef4444'}
+                            strokeWidth={isProfit ? 2 : 3}
                             rx={2}
-                            filter={`url(#glow-${payload.id})`}
+                            filter={`url(#${isProfit ? `glow-${payload.id}` : `glow-loss-${payload.id}`})`}
                             style={{
-                              boxShadow: `0 0 20px ${bodyGlow}`,
+                              boxShadow: isProfit ? `0 0 20px ${bodyGlow}` : `0 0 30px rgba(239, 68, 68, 0.8)`,
                             }}
                           />
                           
@@ -2943,6 +2964,24 @@ export default function NEONERP() {
                               fill="rgba(255,255,255,0.3)"
                               rx={1}
                             />
+                          )}
+                          
+                          {/* Red pulse indicator for loss */}
+                          {!isProfit && (
+                            <>
+                              <circle
+                                cx={x + width / 2}
+                                cy={bodyTop + bodyHeight / 2}
+                                r="8"
+                                fill="none"
+                                stroke="#ef4444"
+                                strokeWidth="1"
+                                opacity="0.6"
+                              >
+                                <animate attributeName="r" values="8;15;8" dur="2s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite"/>
+                              </circle>
+                            </>
                           )}
                         </g>
                       );
@@ -7050,6 +7089,74 @@ Lanjutkan restore?`;
           )}
         </ScrollArea>
       </main>
+
+      {/* Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-slate-900/95 border-t border-slate-700 backdrop-blur-sm z-40">
+        <div className="flex items-center justify-between px-4 py-2">
+          <p className="text-xs text-slate-500">
+            © 2025 <span className="text-cyan-400 font-medium">PROFESIONAL ERP DASHBOARD PROJECT</span> By.Edho
+          </p>
+          <button
+            onClick={() => setShowServiceDialog(true)}
+            className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20"
+          >
+            <MessageCircle className="w-3 h-3" />
+            Service
+          </button>
+        </div>
+      </footer>
+
+      {/* Service Dialog */}
+      <Dialog open={showServiceDialog} onOpenChange={setShowServiceDialog}>
+        <DialogContent className="bg-slate-900 border-cyan-500/30 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-cyan-400" />
+              </div>
+              Layanan Service
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-6 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
+              <MessageCircle className="w-8 h-8 text-cyan-400" />
+            </div>
+            <p className="text-slate-300 mb-4">
+              Silahkan hubungi kami di nomor
+            </p>
+            <a 
+              href="tel:+6281281484738" 
+              className="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors"
+            >
+              +62 8128 1484 738
+            </a>
+            <p className="text-slate-400 mt-4 text-sm">
+              jika ada kendala dengan program
+            </p>
+            <p className="text-cyan-400 font-medium mt-2">
+              PROFESIONAL ERP DASHBOARD PROJECT
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowServiceDialog(false)}
+              className="flex-1"
+            >
+              Tutup
+            </Button>
+            <Button 
+              className="flex-1 btn-neon"
+              onClick={() => {
+                window.open('https://wa.me/6281281484738', '_blank');
+              }}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Progress Update Dialog */}
       <Dialog open={showProgressDialog} onOpenChange={setShowProgressDialog}>

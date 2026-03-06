@@ -3166,43 +3166,56 @@ export default function NEONERP() {
                         <Calendar className="w-5 h-5 text-cyan-400" />
                         Project Schedule Timeline
                       </CardTitle>
-                      <CardDescription className="text-slate-400">Progress vs Schedule Timeline</CardDescription>
+                      <CardDescription className="text-slate-400">Progress vs Schedule Timeline - Active Projects Only</CardDescription>
                     </div>
                     <div className="flex gap-4 text-xs">
                       <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-cyan-400"></span>
-                        <span className="text-slate-400">Progress</span>
+                        <span className="w-3 h-3 rounded bg-emerald-400"></span>
+                        <span className="text-slate-400">Deal</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-slate-500"></span>
-                        <span className="text-slate-400">Schedule</span>
+                        <span className="w-3 h-3 rounded bg-cyan-400"></span>
+                        <span className="text-slate-400">InProgress</span>
                       </span>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    const allProjects = projectStats.sort((a, b) => {
-                      const statusOrder: Record<string, number> = { InProgress: 1, Deal: 2, Completed: 3, Cancelled: 4 };
-                      return (statusOrder[a.status] || 5) - (statusOrder[b.status] || 5);
-                    });
+                    // Filter only active projects (Deal/InProgress)
+                    const activeProjects = projectStats
+                      .filter((p: any) => p.status === 'Deal' || p.status === 'InProgress')
+                      .sort((a: any, b: any) => {
+                        const statusOrder: Record<string, number> = { InProgress: 1, Deal: 2 };
+                        return (statusOrder[a.status] || 5) - (statusOrder[b.status] || 5);
+                      });
                     
                     const today = new Date();
                     
-                    return allProjects.length > 0 ? (
-                      <div className="space-y-3">
-                        {allProjects.slice(0, 8).map((project) => {
+                    // Helper function to format date
+                    const formatDateShort = (date: Date | null) => {
+                      if (!date) return '-';
+                      const day = date.getDate().toString().padStart(2, '0');
+                      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                      const year = date.getFullYear().toString().slice(-2);
+                      return `${day}/${month}/${year}`;
+                    };
+                    
+                    return activeProjects.length > 0 ? (
+                      <div className="space-y-4">
+                        {activeProjects.map((project: any) => {
                           const startDate = project.startDate ? new Date(project.startDate) : null;
                           const endDate = project.endDate ? new Date(project.endDate) : null;
                           
                           // Calculate time progress
                           let timeProgress = 0;
                           let daysRemaining = 0;
+                          let totalDays = 0;
                           let isOverdue = false;
                           let isBehind = false;
                           
                           if (startDate && endDate) {
-                            const totalDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+                            totalDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
                             const daysElapsed = Math.max(0, Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
                             daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
                             
@@ -3225,52 +3238,110 @@ export default function NEONERP() {
                             ? 'from-red-500 to-red-400' 
                             : isBehind 
                               ? 'from-amber-500 to-amber-400' 
-                              : 'from-cyan-500 to-cyan-400';
+                              : project.status === 'Deal'
+                                ? 'from-emerald-500 to-emerald-400'
+                                : 'from-cyan-500 to-cyan-400';
                           
-                          const statusLabel = isOverdue 
-                            ? 'Overdue' 
-                            : isBehind 
-                              ? 'Behind' 
-                              : daysRemaining > 0 ? `${daysRemaining}d left` : 'On Track';
+                          // Calculate waktu tersisa text
+                          const getWaktuTersisa = () => {
+                            if (!startDate || !endDate) return { text: 'No Schedule', color: 'text-slate-400' };
+                            if (isOverdue) return { text: 'OVERDUE', color: 'text-red-400' };
+                            if (today < startDate) {
+                              const daysToStart = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                              return { text: `Start in ${daysToStart}d`, color: 'text-slate-400' };
+                            }
+                            if (daysRemaining === 0) return { text: 'Last Day', color: 'text-amber-400' };
+                            if (daysRemaining <= 7) return { text: `${daysRemaining} days left`, color: 'text-amber-400' };
+                            return { text: `${daysRemaining} days left`, color: 'text-cyan-400' };
+                          };
+                          
+                          const waktuTersisa = getWaktuTersisa();
                           
                           return (
-                            <div key={project.id} className="space-y-1">
+                            <div key={project.id} className="space-y-2">
+                              {/* Project Name and Status */}
                               <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-white w-40 truncate" title={project.name}>{project.name}</span>
-                                <div className="flex items-center gap-6 text-xs">
-                                  <span className="text-slate-400">{workProgress}% / {Math.round(timeProgress)}%</span>
-                                  <span className={`font-medium ${isOverdue ? 'text-red-400' : isBehind ? 'text-amber-400' : 'text-cyan-400'}`}>
-                                    {statusLabel}
-                                  </span>
+                                <span className="text-sm font-semibold text-white truncate" title={project.name}>
+                                  {project.name}
+                                </span>
+                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                  project.status === 'Deal' 
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' 
+                                    : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50'
+                                }`}>
+                                  {project.status}
+                                </span>
+                              </div>
+                              
+                              {/* Date Headers: Start | Waktu Tersisa | Finish */}
+                              <div className="flex justify-between items-center text-xs px-1">
+                                {/* Left: Start Date */}
+                                <div className="flex flex-col items-start">
+                                  <span className="text-slate-500 uppercase tracking-wider" style={{ fontSize: '9px' }}>Start Date</span>
+                                  <span className="text-cyan-400 font-mono">{formatDateShort(startDate)}</span>
+                                </div>
+                                
+                                {/* Center: Waktu Tersisa */}
+                                <div className="flex flex-col items-center">
+                                  <span className="text-slate-500 uppercase tracking-wider" style={{ fontSize: '9px' }}>Waktu Tersisa</span>
+                                  <span className={`font-mono font-medium ${waktuTersisa.color}`}>{waktuTersisa.text}</span>
+                                </div>
+                                
+                                {/* Right: Finish Date */}
+                                <div className="flex flex-col items-end">
+                                  <span className="text-slate-500 uppercase tracking-wider" style={{ fontSize: '9px' }}>Finish Date</span>
+                                  <span className="text-purple-400 font-mono">{formatDateShort(endDate)}</span>
                                 </div>
                               </div>
-                              <div className="flex gap-1 h-5">
-                                {/* Progress Bar */}
+                              
+                              {/* Progress Bar with Percentage Inside */}
+                              <div className="relative h-7 bg-slate-700/50 rounded-lg overflow-hidden">
+                                {/* Progress Fill */}
                                 <div 
-                                  className={`bg-gradient-to-r ${progressColor} rounded`}
-                                  style={{ width: `${workProgress}%` }}
-                                />
-                                {/* Remaining */}
-                                <div 
-                                  className="bg-slate-600 rounded"
-                                  style={{ width: `${100 - workProgress}%` }}
-                                />
+                                  className={`h-full bg-gradient-to-r ${progressColor} rounded-lg transition-all duration-500 relative`}
+                                  style={{ width: `${Math.max(workProgress, 5)}%` }}
+                                >
+                                  {/* Percentage inside the bar */}
+                                  {workProgress >= 15 && (
+                                    <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold drop-shadow-lg">
+                                      {workProgress}%
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Percentage outside the bar (for small percentages) */}
+                                {workProgress < 15 && (
+                                  <span className="absolute inset-0 flex items-center justify-start pl-2 text-white text-xs font-bold drop-shadow-lg">
+                                    {workProgress}%
+                                  </span>
+                                )}
+                                
+                                {/* Time progress indicator line */}
+                                {timeProgress > 0 && timeProgress < 100 && (
+                                  <div 
+                                    className="absolute top-0 bottom-0 w-0.5 bg-amber-400/80"
+                                    style={{ left: `${timeProgress}%` }}
+                                    title={`Schedule: ${Math.round(timeProgress)}%`}
+                                  >
+                                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-400 rounded-full" />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
                         })}
                         
-                        {allProjects.length === 0 && (
+                        {activeProjects.length === 0 && (
                           <div className="text-center py-8 text-slate-500">
-                            No projects available
+                            No active projects available
                           </div>
                         )}
                       </div>
                     ) : (
                       <div className="text-center py-12 text-slate-500">
                         <Calendar className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                        <p className="text-lg font-medium">Belum ada project</p>
-                        <p className="text-sm">Tambah project untuk melihat timeline</p>
+                        <p className="text-lg font-medium">Tidak ada project aktif</p>
+                        <p className="text-sm">Project dengan status Deal/InProgress akan ditampilkan di sini</p>
                       </div>
                     );
                   })()}

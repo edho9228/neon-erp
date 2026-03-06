@@ -2775,9 +2775,10 @@ export default function NEONERP() {
                         <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
                         <span className="text-xs text-green-400">WebSocket</span>
                       </div>
-                      {/* Time */}
-                      <div className="text-xs font-mono text-cyan-400 bg-slate-800 px-2 py-1 rounded">
-                        {currentTime.toLocaleTimeString('id-ID')}
+                      {/* Auto Refresh */}
+                      <div className="flex items-center gap-2 px-2 py-1 bg-slate-800 rounded">
+                        <RefreshCw className="w-3 h-3 text-cyan-400 animate-spin" />
+                        <span className="text-xs text-cyan-400">Updating every 5s</span>
                       </div>
                     </div>
                   </div>
@@ -2797,13 +2798,36 @@ export default function NEONERP() {
                       );
                     }
                     
-                    // Generate Candlestick data: Open (saldo awal), High (profit), Low (loss)
+                    // Generate Candlestick data: Open (saldo awal), High (profit), Low (loss), Progress Payment
                     const generateCandlestickData = () => {
                       return allProjects.map((project: any, index: number) => {
                         const open = project.budget || project.contractValue || 0; // Saldo awal
                         const profit = project.income || 0; // High
                         const loss = project.expense || 0; // Low
                         const close = project.profit || 0; // Close = Net P/L
+                        const progressPayment = project.income || 0; // Progress Payment
+                        
+                        // Calculate progress payment percentage
+                        const progressPaymentPct = open > 0 ? (progressPayment / open) * 100 : 0;
+                        
+                        // Color based on project status category
+                        let categoryColor = '#64748b'; // Default slate
+                        let categoryGlow = 'rgba(100, 116, 139, 0.5)';
+                        
+                        if (project.status === 'InProgress') {
+                          categoryColor = '#06b6d4'; // Cyan
+                          categoryGlow = 'rgba(6, 182, 212, 0.5)';
+                        } else if (project.status === 'Deal') {
+                          categoryColor = '#10b981'; // Emerald
+                          categoryGlow = 'rgba(16, 185, 129, 0.5)';
+                        } else if (project.status === 'Negotiation') {
+                          categoryColor = '#f59e0b'; // Amber
+                          categoryGlow = 'rgba(245, 158, 11, 0.5)';
+                        }
+                        
+                        // Override with profit/loss color for body
+                        const bodyColor = close >= 0 ? '#10b981' : '#ef4444';
+                        const bodyGlow = close >= 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)';
                         
                         return {
                           name: project.name.length > 10 ? project.name.substring(0, 10) + '...' : project.name,
@@ -2824,6 +2848,14 @@ export default function NEONERP() {
                           income: project.income,
                           expense: project.expense,
                           progress: project.progress || 0,
+                          // Progress Payment
+                          progressPayment,
+                          progressPaymentPct,
+                          // Category colors
+                          categoryColor,
+                          categoryGlow,
+                          bodyColor,
+                          bodyGlow,
                         };
                       });
                     };
@@ -2833,19 +2865,17 @@ export default function NEONERP() {
                     const profitCount = allProjects.filter((p: any) => p.profit >= 0).length;
                     const lossCount = allProjects.filter((p: any) => p.profit < 0).length;
                     
-                    // Custom Candlestick Shape Component
+                    // Custom Candlestick Shape Component with category colors
                     const CandlestickShape = (props: any) => {
                       const { x, y, width, height, payload } = props;
                       if (!payload) return null;
                       
-                      const { open, high, low, close, isProfit } = payload;
+                      const { open, high, low, close, categoryColor, categoryGlow, bodyColor, bodyGlow, isProfit } = payload;
                       const range = Math.max(Math.abs(high), Math.abs(low), Math.abs(open), Math.abs(close)) || 1;
                       
                       // Scale to fit chart
                       const scaleY = (val: number) => y + height / 2 - (val / range) * (height / 2 - 20);
                       
-                      const color = isProfit ? '#10b981' : '#ef4444';
-                      const glowColor = isProfit ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)';
                       const bodyTop = scaleY(Math.max(open, close));
                       const bodyBottom = scaleY(Math.min(open, close));
                       const bodyHeight = Math.max(4, Math.abs(bodyBottom - bodyTop));
@@ -2865,41 +2895,41 @@ export default function NEONERP() {
                             </filter>
                           </defs>
                           
-                          {/* Upper shadow (wick) */}
+                          {/* Upper shadow (wick) - Category color */}
                           <line
                             x1={x + width / 2}
                             y1={wickTop}
                             x2={x + width / 2}
                             y2={bodyTop}
-                            stroke={color}
+                            stroke={categoryColor}
                             strokeWidth={2}
                             filter={`url(#glow-${payload.id})`}
                           />
                           
-                          {/* Lower shadow (wick) */}
+                          {/* Lower shadow (wick) - Category color */}
                           <line
                             x1={x + width / 2}
                             y1={bodyBottom}
                             x2={x + width / 2}
                             y2={wickBottom}
-                            stroke={color}
+                            stroke={categoryColor}
                             strokeWidth={2}
                             filter={`url(#glow-${payload.id})`}
                           />
                           
-                          {/* Body */}
+                          {/* Body - Profit/Loss color */}
                           <rect
                             x={x + width * 0.2}
                             y={bodyTop}
                             width={width * 0.6}
                             height={bodyHeight}
-                            fill={isProfit ? color : color}
-                            stroke={color}
+                            fill={bodyColor}
+                            stroke={categoryColor}
                             strokeWidth={2}
                             rx={2}
                             filter={`url(#glow-${payload.id})`}
                             style={{
-                              boxShadow: `0 0 20px ${glowColor}`,
+                              boxShadow: `0 0 20px ${bodyGlow}`,
                             }}
                           />
                           
@@ -2918,7 +2948,7 @@ export default function NEONERP() {
                       );
                     };
                     
-                    // Custom Tooltip
+                    // Custom Tooltip with Progress Payment
                     const CustomTooltip = ({ active, payload }: any) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
@@ -2926,26 +2956,28 @@ export default function NEONERP() {
                           <div className="bg-slate-900/95 border border-slate-600 rounded-lg p-4 shadow-2xl backdrop-blur-sm">
                             <div className="flex items-center gap-2 mb-3">
                               <span className="text-white font-bold">{data.fullName}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded ${
-                                data.status === 'InProgress' ? 'bg-cyan-500/20 text-cyan-400' :
-                                data.status === 'Deal' ? 'bg-green-500/20 text-green-400' :
-                                'bg-slate-500/20 text-slate-400'
-                              }`}>
+                              <span 
+                                className="text-xs px-2 py-0.5 rounded"
+                                style={{ 
+                                  backgroundColor: `${data.categoryColor}20`,
+                                  color: data.categoryColor 
+                                }}
+                              >
                                 {data.status}
                               </span>
                             </div>
                             
                             <div className="space-y-2 text-xs">
                               <div className="flex justify-between gap-4">
-                                <span className="text-slate-400">Open (Saldo Awal):</span>
+                                <span className="text-slate-400">Open (Budget):</span>
                                 <span className="text-cyan-400 font-mono">{formatCurrency(data.rawOpen)}</span>
                               </div>
                               <div className="flex justify-between gap-4">
-                                <span className="text-slate-400">High (Profit):</span>
+                                <span className="text-slate-400">High (Income):</span>
                                 <span className="text-green-400 font-mono">{formatCurrency(data.rawHigh)}</span>
                               </div>
                               <div className="flex justify-between gap-4">
-                                <span className="text-slate-400">Low (Loss):</span>
+                                <span className="text-slate-400">Low (Expense):</span>
                                 <span className="text-red-400 font-mono">{formatCurrency(data.rawLow)}</span>
                               </div>
                               <div className="border-t border-slate-700 pt-2 mt-2">
@@ -2956,9 +2988,27 @@ export default function NEONERP() {
                                   </span>
                                 </div>
                               </div>
+                              {/* Progress Payment */}
+                              <div className="border-t border-slate-700 pt-2 mt-2">
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-slate-400">Progress Payment:</span>
+                                  <span className="text-amber-400 font-mono">{formatCurrency(data.progressPayment)}</span>
+                                </div>
+                                <div className="mt-1 flex justify-between gap-4">
+                                  <span className="text-slate-400">Payment Progress:</span>
+                                  <span className="text-purple-400 font-mono">{data.progressPaymentPct.toFixed(1)}%</span>
+                                </div>
+                                {/* Progress Payment Bar */}
+                                <div className="mt-2 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all duration-500"
+                                    style={{ width: `${Math.min(100, data.progressPaymentPct)}%` }}
+                                  />
+                                </div>
+                              </div>
                               <div className="flex justify-between gap-4">
-                                <span className="text-slate-400">Progress:</span>
-                                <span className="text-amber-400">{data.progress}%</span>
+                                <span className="text-slate-400">Work Progress:</span>
+                                <span className="text-cyan-400">{data.progress}%</span>
                               </div>
                             </div>
                           </div>
@@ -3001,15 +3051,6 @@ export default function NEONERP() {
                                 <p className="text-lg font-bold text-red-400">{lossCount}</p>
                               </div>
                             </div>
-                          </div>
-                          
-                          {/* Real-time indicator */}
-                          <div className="flex items-center gap-2 text-xs text-slate-400">
-                            <div className="relative">
-                              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                              <div className="absolute inset-0 w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
-                            </div>
-                            <span>Updating every 5s</span>
                           </div>
                         </div>
                         
@@ -3098,9 +3139,6 @@ export default function NEONERP() {
                               </div>
                               <span className="text-[10px] text-slate-400 uppercase tracking-wider">Real-time</span>
                             </div>
-                            <span className="text-[10px] text-slate-500">
-                              Last sync: {currentTime.toLocaleTimeString('id-ID')}
-                            </span>
                           </div>
                           <div className="flex items-center gap-4">
                             <span className="text-[10px] text-slate-500">

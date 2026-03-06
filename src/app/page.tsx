@@ -1942,6 +1942,88 @@ export default function NEONERP() {
     printWindow.print();
   };
 
+  // Save RAB to Excel function
+  const saveRABToExcel = (project: Project) => {
+    // Get RAB items from project or fetch from rabItems state
+    const projectRabItems = project.rabItems || rabItems.filter(item => item.projectId === project.id);
+    
+    if (!projectRabItems || projectRabItems.length === 0) {
+      toast({ 
+        title: 'Error', 
+        description: 'Tidak ada item RAB untuk disimpan. Pastikan project memiliki item RAB.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
+    const total = projectRabItems.reduce((sum, item) => sum + item.totalPrice, 0);
+
+    try {
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Prepare header rows
+      const headerRows = [
+        [company?.name || 'PT. Konstruksi Nusantara'],
+        [company?.address || 'Alamat Perusahaan'],
+        [company?.email && company?.phone ? `${company.email} | ${company.phone}` : company?.email || company?.phone || ''],
+        [],
+        ['RENCANA ANGGARAN BIAYA (RAB)'],
+        ['Project: ' + project.name],
+        ['Client: ' + (project.client?.name || '-')],
+        ['Contract Value: ' + formatCurrency(project.contractValue || 0)],
+        [],
+        ['No', 'Kategori', 'Nama Item', 'Deskripsi', 'Qty', 'Satuan', 'Harga Satuan', 'Total Harga'],
+      ];
+
+      // Prepare data rows
+      const dataRows = projectRabItems.map((item, idx) => [
+        idx + 1,
+        item.category,
+        item.item?.name || '-',
+        item.description || '-',
+        item.quantity,
+        item.item?.unit || '-',
+        item.unitPrice,
+        item.totalPrice
+      ]);
+
+      // Combine all rows
+      const allRows = [...headerRows, ...dataRows];
+
+      // Add total row
+      allRows.push([]);
+      allRows.push(['', '', '', '', '', '', 'TOTAL:', total]);
+
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(allRows);
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },   // No
+        { wch: 12 },  // Kategori
+        { wch: 25 },  // Nama Item
+        { wch: 30 },  // Deskripsi
+        { wch: 8 },   // Qty
+        { wch: 8 },   // Satuan
+        { wch: 18 },  // Harga Satuan
+        { wch: 20 },  // Total Harga
+      ];
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'RAB');
+
+      // Generate and download
+      const fileName = `RAB_${project.name?.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast({ title: 'Success', description: 'RAB berhasil disimpan ke Excel' });
+    } catch (error: any) {
+      console.error('Excel export error:', error);
+      toast({ title: 'Error', description: error.message || 'Gagal menyimpan RAB ke Excel', variant: 'destructive' });
+    }
+  };
+
   // Journal functions
   const loadJournalData = async () => {
     try {
@@ -4402,8 +4484,11 @@ export default function NEONERP() {
                                 <Button size="sm" variant="ghost" disabled={isVisitor} onClick={() => { setProgressForm({ projectId: project.id, progress: project.progress }); setShowProgressDialog(true); }}>
                                   <TrendingUp className="w-4 h-4 text-cyan-400" />
                                 </Button>
-                                <Button size="sm" variant="ghost" disabled={isVisitor} onClick={() => printRAB(project)}>
+                                <Button size="sm" variant="ghost" disabled={isVisitor} onClick={() => printRAB(project)} title="Print RAB">
                                   <Printer className="w-4 h-4 text-slate-400" />
+                                </Button>
+                                <Button size="sm" variant="ghost" disabled={isVisitor} onClick={() => saveRABToExcel(project)} title="Save RAB to Excel">
+                                  <FileText className="w-4 h-4 text-green-400" />
                                 </Button>
                                 <Button size="sm" variant="ghost" disabled={isVisitor} onClick={() => deleteProject(project.id)}>
                                   <Trash2 className="w-4 h-4 text-red-400" />

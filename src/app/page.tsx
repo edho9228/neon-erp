@@ -16,8 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend, ComposedChart, ReferenceLine, Brush
@@ -1535,8 +1534,8 @@ export default function NEONERP() {
     printWindow.print();
   };
 
-  // Save transactions as PDF function (client-side using jsPDF)
-  const saveTransactionsPDF = async () => {
+  // Save transactions as Excel function (client-side using xlsx)
+  const saveTransactionsExcel = async () => {
     if (transactions.length === 0) {
       toast({ title: 'Error', description: 'Tidak ada transaksi untuk disimpan', variant: 'destructive' });
       return;
@@ -1549,143 +1548,91 @@ export default function NEONERP() {
         ? 'Semua Project' 
         : projects.find(p => p.id === selectedProject)?.name || 'Project';
 
-      // Get page size dimensions (all in portrait orientation)
-      const pageSizes: Record<string, [number, number]> = {
-        'A4': [210, 297],
-        'Letter': [216, 279],
-        'Legal': [216, 356],
-        'A3': [297, 420],
-        'A5': [148, 210]
-      };
+      // Create workbook
+      const wb = XLSX.utils.book_new();
       
-      const [pageWidth, pageHeight] = pageSizes[pdfPageSize] || pageSizes['A4'];
-      
-      // Create PDF document in portrait orientation
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: pdfPageSize.toLowerCase() as any
-      });
-
-      // Add company header
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text(company?.name || 'PT. Konstruksi Nusantara', pageWidth / 2, 20, { align: 'center' });
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(company?.address || 'Alamat Perusahaan', pageWidth / 2, 27, { align: 'center' });
-      
-      // Contact info
-      const contactInfo = [];
-      if (company?.email) contactInfo.push(`Email: ${company.email}`);
-      if (company?.phone) contactInfo.push(`Telp: ${company.phone}`);
-      if (contactInfo.length > 0) {
-        doc.text(contactInfo.join(' | '), pageWidth / 2, 33, { align: 'center' });
-      }
-      
-      // Horizontal line
-      doc.setLineWidth(0.5);
-      doc.line(15, 38, pageWidth - 15, 38);
-      doc.setLineWidth(0.2);
-      doc.line(15, 39, pageWidth - 15, 39);
-      
-      // Document title
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('LAPORAN TRANSAKSI KEUANGAN', pageWidth / 2, 50, { align: 'center' });
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      const currentDate = new Date().toLocaleDateString('id-ID', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-      doc.text(`Periode: ${currentDate}`, pageWidth / 2, 57, { align: 'center' });
-      
-      if (projectName !== 'Semua Project') {
-        doc.text(`Project: ${projectName}`, pageWidth / 2, 63, { align: 'center' });
-      }
+      // Prepare data rows (without Actions column)
+      const dataRows = transactions.slice(0, 100).map((tx, idx) => [
+        idx + 1,
+        new Date(tx.date).toLocaleDateString('id-ID'),
+        tx.project?.name || '-',
+        tx.type,
+        tx.category,
+        tx.description || '-',
+        tx.amount,
+        tx.type === 'Income' ? 'Penerimaan' : 'Pengeluaran'
+      ]);
 
       // Calculate totals
       const totalIncome = transactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
       const totalExpense = transactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
       const netTotal = totalIncome - totalExpense;
 
-      // Prepare table data (without Actions column)
-      const tableData = transactions.slice(0, 20).map((tx, idx) => [
-        (idx + 1).toString(),
-        new Date(tx.date).toLocaleDateString('id-ID'),
-        tx.project?.name || '-',
-        tx.type,
-        tx.category,
-        tx.description || '-',
-        `${tx.type === 'Income' ? '+' : '-'} Rp ${tx.amount.toLocaleString('id-ID')}`
-      ]);
+      // Create header info rows
+      const headerRows = [
+        [company?.name || 'PT. Konstruksi Nusantara'],
+        [company?.address || 'Alamat Perusahaan'],
+        [company?.email && company?.phone ? `${company.email} | ${company.phone}` : company?.email || company?.phone || ''],
+        [],
+        ['LAPORAN TRANSAKSI KEUANGAN'],
+        ['Periode: ' + new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })],
+        ['Project: ' + projectName],
+        [],
+        ['No', 'Tanggal', 'Project', 'Tipe', 'Kategori', 'Deskripsi', 'Jumlah (Rp)', 'Keterangan'],
+      ];
 
-      // Add totals rows
-      tableData.push(['', '', '', '', '', 'Total Penerimaan:', `+ Rp ${totalIncome.toLocaleString('id-ID')}`]);
-      tableData.push(['', '', '', '', '', 'Total Pengeluaran:', `- Rp ${totalExpense.toLocaleString('id-ID')}`]);
-      tableData.push(['', '', '', '', '', 'Saldo Akhir:', `${netTotal >= 0 ? '+' : ''} Rp ${netTotal.toLocaleString('id-ID')}`]);
+      // Add data rows
+      const allRows = [...headerRows, ...dataRows];
 
-      // Generate table using autoTable
-      autoTable(doc, {
-        startY: projectName !== 'Semua Project' ? 70 : 67,
-        head: [['No', 'Tanggal', 'Project', 'Tipe', 'Kategori', 'Deskripsi', 'Jumlah']],
-        body: tableData,
-        theme: 'grid',
-        headStyles: {
-          fillColor: [31, 78, 121],
-          textColor: 255,
-          fontStyle: 'bold',
-          halign: 'center',
-          fontSize: 9
-        },
-        bodyStyles: {
-          fontSize: 8
-        },
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 10 },
-          1: { halign: 'center', cellWidth: 25 },
-          2: { cellWidth: 30 },
-          3: { halign: 'center', cellWidth: 20 },
-          4: { halign: 'center', cellWidth: 25 },
-          5: { cellWidth: 40 },
-          6: { halign: 'right', cellWidth: 35 }
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        },
-        // Style for total rows (last 3 rows)
-        willDrawCell: (data) => {
-          if (data.row.index >= tableData.length - 3) {
-            doc.setFont('helvetica', 'bold');
-          }
-        },
-        margin: { left: 15, right: 15 }
-      });
+      // Add empty row and totals
+      allRows.push([]);
+      allRows.push(['', '', '', '', '', 'Total Penerimaan:', totalIncome, '']);
+      allRows.push(['', '', '', '', '', 'Total Pengeluaran:', totalExpense, '']);
+      allRows.push(['', '', '', '', '', 'Saldo Akhir:', netTotal, netTotal >= 0 ? 'PROFIT' : 'LOSS']);
+      allRows.push([]);
+      allRows.push(['', '', '', '', '', 'Mengetahui,', '', '']);
+      allRows.push(['', '', '', '', '', '', '', '']);
+      allRows.push(['', '', '', '', '', '', '', '']);
+      allRows.push(['', '', '', '', '', '', '', '']);
+      allRows.push(['', '', '', '', '', '_________________________', '', '']);
+      allRows.push(['', '', '', '', '', 'Manager Keuangan', '', '']);
 
-      // Get final Y position after table
-      const finalY = (doc as any).lastAutoTable.finalY || 200;
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(allRows);
 
-      // Add signature section
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Mengetahui,', pageWidth - 50, finalY + 20);
-      doc.text('_________________________', pageWidth - 50, finalY + 50);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Manager Keuangan', pageWidth - 50, finalY + 57);
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 5 },   // No
+        { wch: 12 },  // Tanggal
+        { wch: 25 },  // Project
+        { wch: 10 },  // Tipe
+        { wch: 15 },  // Kategori
+        { wch: 35 },  // Deskripsi
+        { wch: 20 },  // Jumlah
+        { wch: 12 },  // Keterangan
+      ];
 
-      // Save the PDF
-      doc.save(`Laporan_Transaksi_${new Date().toISOString().split('T')[0]}.pdf`);
+      // Set print area and page setup for portrait orientation
+      ws['!pageSetup'] = {
+        paperSize: pdfPageSize === 'A4' ? 9 : pdfPageSize === 'Letter' ? 1 : pdfPageSize === 'Legal' ? 5 : 9,
+        orientation: 'portrait',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0
+      };
 
-      toast({ title: 'Success', description: 'PDF berhasil disimpan' });
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Transaksi');
+
+      // Generate and download
+      const fileName = `Laporan_Transaksi_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast({ title: 'Success', description: 'Excel berhasil disimpan' });
       setShowPdfDialog(false);
     } catch (error: any) {
-      console.error('PDF export error:', error);
-      toast({ title: 'Error', description: error.message || 'Gagal menyimpan PDF', variant: 'destructive' });
+      console.error('Excel export error:', error);
+      toast({ title: 'Error', description: error.message || 'Gagal menyimpan Excel', variant: 'destructive' });
     } finally {
       setPdfExporting(false);
     }
@@ -5159,14 +5106,14 @@ export default function NEONERP() {
                     </DialogTrigger>
                     <DialogContent className="bg-slate-900 border-slate-700">
                       <DialogHeader>
-                        <DialogTitle className="text-white">Save Transaksi as PDF</DialogTitle>
+                        <DialogTitle className="text-white">Save Transaksi ke Excel</DialogTitle>
                         <DialogDescription className="text-slate-400">
-                          Pilih ukuran halaman untuk menyimpan laporan transaksi
+                          Simpan laporan transaksi dalam format Excel (.xlsx)
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                          <Label>Ukuran Halaman</Label>
+                          <Label>Ukuran Halaman (untuk print)</Label>
                           <Select value={pdfPageSize} onValueChange={setPdfPageSize}>
                             <SelectTrigger className="bg-slate-800 border-slate-700">
                               <SelectValue />
@@ -5180,13 +5127,13 @@ export default function NEONERP() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
-                          <div className="flex items-center gap-2 text-cyan-400 text-sm">
-                            <AlertCircle className="w-4 h-4" />
-                            <span>Orientasi: Portrait (Tegak)</span>
+                        <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                          <div className="flex items-center gap-2 text-green-400 text-sm">
+                            <FileText className="w-4 h-4" />
+                            <span>Format: Microsoft Excel (.xlsx)</span>
                           </div>
                           <p className="text-xs text-slate-400 mt-1">
-                            File PDF akan disimpan secara otomatis ke folder download komputer Anda
+                            File Excel akan disimpan secara otomatis ke folder download komputer Anda
                           </p>
                         </div>
                       </div>
@@ -5194,7 +5141,7 @@ export default function NEONERP() {
                         <Button variant="outline" onClick={() => setShowPdfDialog(false)}>Cancel</Button>
                         <Button 
                           className="btn-neon" 
-                          onClick={saveTransactionsPDF} 
+                          onClick={saveTransactionsExcel} 
                           disabled={pdfExporting}
                         >
                           {pdfExporting ? (
@@ -5205,7 +5152,7 @@ export default function NEONERP() {
                           ) : (
                             <>
                               <Download className="w-4 h-4 mr-2" />
-                              Save PDF
+                              Save Excel
                             </>
                           )}
                         </Button>

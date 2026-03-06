@@ -3088,62 +3088,6 @@ export default function NEONERP() {
                           </ResponsiveContainer>
                         </div>
                         
-                        {/* Project Cards - Drill-down */}
-                        <div className="border-t border-slate-700 pt-4">
-                          <h4 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
-                            <span>📊</span>
-                            Click chart or cards below for drill-down details
-                          </h4>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[200px] overflow-y-auto">
-                            {allProjects.map((project: any) => (
-                              <div 
-                                key={project.id}
-                                className={`group p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:scale-[1.02] ${
-                                  project.profit >= 0 
-                                    ? 'bg-gradient-to-br from-emerald-900/30 to-green-900/20 border-emerald-500/30 hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/20' 
-                                    : 'bg-gradient-to-br from-red-900/30 to-rose-900/20 border-red-500/30 hover:border-red-400 hover:shadow-lg hover:shadow-red-500/20'
-                                }`}
-                                onClick={() => {
-                                  setSelectedProject(project.id);
-                                  setActiveMenu('projects');
-                                }}
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-medium text-white truncate group-hover:text-cyan-400 transition-colors">
-                                    {project.name}
-                                  </span>
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                    project.status === 'InProgress' ? 'bg-cyan-500/30 text-cyan-400' :
-                                    project.status === 'Deal' ? 'bg-emerald-500/30 text-emerald-400' :
-                                    'bg-slate-500/30 text-slate-400'
-                                  }`}>
-                                    {project.status}
-                                  </span>
-                                </div>
-                                
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[10px] text-slate-400">P/L</span>
-                                  <span className={`text-sm font-bold font-mono ${
-                                    project.profit >= 0 ? 'text-emerald-400' : 'text-red-400'
-                                  }`}>
-                                    {project.profit >= 0 ? '+' : ''}{formatCurrency(project.profit)}
-                                  </span>
-                                </div>
-                                
-                                {/* Mini progress bar */}
-                                <div className="mt-2 h-1 bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full rounded-full transition-all duration-500 ${
-                                      project.profit >= 0 ? 'bg-emerald-400' : 'bg-red-400'
-                                    }`}
-                                    style={{ width: `${Math.min(100, project.progress || 0)}%` }}
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
                         {/* Footer with Stats */}
                         <div className="flex items-center justify-between pt-4 border-t border-slate-700">
                           <div className="flex items-center gap-4">
@@ -3175,7 +3119,7 @@ export default function NEONERP() {
                 </CardContent>
               </Card>
 
-              {/* Project Schedule Timeline - Lightweight */}
+              {/* Project Schedule Timeline - Horizontal Bar Style */}
               <Card className="glass-card">
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -3184,27 +3128,22 @@ export default function NEONERP() {
                         <Calendar className="w-5 h-5 text-cyan-400" />
                         Project Schedule Timeline
                       </CardTitle>
-                      <CardDescription className="text-slate-400">Monitor project progress vs schedule timeline</CardDescription>
+                      <CardDescription className="text-slate-400">Progress vs Schedule Timeline</CardDescription>
                     </div>
                     <div className="flex gap-4 text-xs">
                       <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-green-500"></span>
-                        <span className="text-slate-400">On Track</span>
+                        <span className="w-3 h-3 rounded bg-cyan-400"></span>
+                        <span className="text-slate-400">Progress</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-amber-500"></span>
-                        <span className="text-slate-400">Behind</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-3 h-3 rounded bg-red-500"></span>
-                        <span className="text-slate-400">Overdue</span>
+                        <span className="w-3 h-3 rounded bg-slate-500"></span>
+                        <span className="text-slate-400">Schedule</span>
                       </span>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    // Get all projects, sort by status priority
                     const allProjects = projectStats.sort((a, b) => {
                       const statusOrder: Record<string, number> = { InProgress: 1, Deal: 2, Completed: 3, Cancelled: 4 };
                       return (statusOrder[a.status] || 5) - (statusOrder[b.status] || 5);
@@ -3213,22 +3152,20 @@ export default function NEONERP() {
                     const today = new Date();
                     
                     return allProjects.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {allProjects.map((project) => {
+                      <div className="space-y-3">
+                        {allProjects.slice(0, 8).map((project) => {
                           const startDate = project.startDate ? new Date(project.startDate) : null;
                           const endDate = project.endDate ? new Date(project.endDate) : null;
                           
                           // Calculate time progress
                           let timeProgress = 0;
-                          let daysElapsed = 0;
                           let daysRemaining = 0;
                           let isOverdue = false;
                           let isBehind = false;
-                          let isAhead = false;
                           
                           if (startDate && endDate) {
                             const totalDays = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-                            daysElapsed = Math.max(0, Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+                            const daysElapsed = Math.max(0, Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
                             daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
                             
                             if (today > endDate) {
@@ -3244,79 +3181,52 @@ export default function NEONERP() {
                           const workProgress = project.progress || 0;
                           const progressDiff = workProgress - timeProgress;
                           isBehind = progressDiff < -10 && !isOverdue;
-                          isAhead = progressDiff > 10 && !isOverdue;
                           
                           // Determine status color
-                          const statusColor = isOverdue 
-                            ? 'border-red-500/50 bg-red-500/5' 
+                          const progressColor = isOverdue 
+                            ? 'from-red-500 to-red-400' 
                             : isBehind 
-                              ? 'border-amber-500/50 bg-amber-500/5' 
-                              : isAhead
-                                ? 'border-green-500/50 bg-green-500/5'
-                                : 'border-slate-700 bg-slate-800/30';
+                              ? 'from-amber-500 to-amber-400' 
+                              : 'from-cyan-500 to-cyan-400';
+                          
+                          const statusLabel = isOverdue 
+                            ? 'Overdue' 
+                            : isBehind 
+                              ? 'Behind' 
+                              : daysRemaining > 0 ? `${daysRemaining}d left` : 'On Track';
                           
                           return (
-                            <div key={project.id} className={`rounded-lg border p-4 transition-all hover:scale-[1.02] ${statusColor}`}>
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-medium text-white text-sm truncate" title={project.name}>
-                                    {project.name}
-                                  </h4>
-                                  <p className="text-xs text-slate-500">{project.code}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {isOverdue && <AlertTriangle className="w-4 h-4 text-red-400" />}
-                                  {isAhead && !isOverdue && <TrendingUp className="w-4 h-4 text-green-400" />}
-                                  {isBehind && !isOverdue && <Clock className="w-4 h-4 text-amber-400" />}
-                                </div>
-                              </div>
-                              
-                              {/* Progress Bar */}
-                              <div className="mb-3">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span className="text-slate-400">Progress</span>
-                                  <span className="text-white font-medium">{workProgress}%</span>
-                                </div>
-                                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full transition-all duration-500 rounded-full ${
-                                      isOverdue ? 'bg-red-500' : isBehind ? 'bg-amber-500' : 'bg-green-500'
-                                    }`}
-                                    style={{ width: `${workProgress}%` }}
-                                  />
-                                </div>
-                              </div>
-                              
-                              {/* Date Info */}
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div className="bg-slate-800/50 rounded px-2 py-1">
-                                  <p className="text-slate-500">Start</p>
-                                  <p className="text-cyan-400 font-medium">
-                                    {startDate ? startDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}
-                                  </p>
-                                </div>
-                                <div className="bg-slate-800/50 rounded px-2 py-1">
-                                  <p className="text-slate-500">Finish</p>
-                                  <p className={`${isOverdue ? 'text-red-400' : 'text-pink-400'} font-medium`}>
-                                    {endDate ? endDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}
-                                  </p>
-                                </div>
-                              </div>
-                              
-                              {/* Days Info */}
-                              {(startDate && endDate) && (
-                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-700/50 text-xs">
-                                  <span className="text-slate-400">
-                                    Elapsed: <span className="text-white font-medium">{daysElapsed}</span> days
-                                  </span>
-                                  <span className={isOverdue ? 'text-red-400 font-medium' : 'text-slate-400'}>
-                                    {isOverdue ? 'Overdue!' : `Remaining: ${daysRemaining} days`}
+                            <div key={project.id} className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-white w-40 truncate" title={project.name}>{project.name}</span>
+                                <div className="flex items-center gap-6 text-xs">
+                                  <span className="text-slate-400">{workProgress}% / {Math.round(timeProgress)}%</span>
+                                  <span className={`font-medium ${isOverdue ? 'text-red-400' : isBehind ? 'text-amber-400' : 'text-cyan-400'}`}>
+                                    {statusLabel}
                                   </span>
                                 </div>
-                              )}
+                              </div>
+                              <div className="flex gap-1 h-5">
+                                {/* Progress Bar */}
+                                <div 
+                                  className={`bg-gradient-to-r ${progressColor} rounded`}
+                                  style={{ width: `${workProgress}%` }}
+                                />
+                                {/* Remaining */}
+                                <div 
+                                  className="bg-slate-600 rounded"
+                                  style={{ width: `${100 - workProgress}%` }}
+                                />
+                              </div>
                             </div>
                           );
                         })}
+                        
+                        {allProjects.length === 0 && (
+                          <div className="text-center py-8 text-slate-500">
+                            No projects available
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-12 text-slate-500">

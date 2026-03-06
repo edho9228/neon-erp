@@ -8,9 +8,8 @@ export async function GET(request: NextRequest) {
     console.log('Dashboard API - User authenticated:', !!user, user ? user.email : 'No user');
     
     // Allow access even without authentication (for visitor mode)
-    // But still check for user for logging purposes
 
-    // Get ALL projects for counts
+    // Get ALL projects with transactions in ONE query
     let allProjects: any[] = [];
     try {
       allProjects = await db.project.findMany({
@@ -22,13 +21,12 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
       });
       console.log('Dashboard API - Total projects from DB:', allProjects.length);
-      console.log('Dashboard API - Project statuses:', allProjects.map(p => ({ name: p.name, status: p.status })));
     } catch (e) {
       console.error('Error fetching projects:', e);
       allProjects = [];
     }
 
-    // Filter out COMPLETED projects for dashboard charts - only show active projects
+    // Filter out COMPLETED projects for dashboard charts
     const activeProjects = allProjects.filter(p => p.status !== 'Completed');
     console.log('Dashboard API - Active projects (non-Completed):', activeProjects.length);
 
@@ -69,20 +67,45 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Calculate total stats including completed for display
+    // Calculate total stats
     const totalProjectsCount = allProjects.length;
     const activeProjectsCount = allProjects.filter(p => p.status === 'InProgress').length;
     const completedProjectsCount = allProjects.filter(p => p.status === 'Completed').length;
 
-    // Daily data - Last 30 days (from ALL transactions)
-    const dailyData: { date: string; income: number; expense: number; profit: number; cumulativeProfit: number }[] = [];
+    // Get ALL transactions once (optimized - no loop queries)
     const now = new Date();
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    let allTransactions: any[] = [];
+    try {
+      allTransactions = await db.transaction.findMany({
+        where: {
+          date: {
+            gte: thirtyDaysAgo,
+            lte: now,
+          },
+        },
+        include: {
+          project: {
+            select: { id: true, name: true, status: true }
+          }
+        }
+      });
+      console.log('Dashboard API - Transactions fetched:', allTransactions.length);
+    } catch (e) {
+      console.error('Error fetching transactions:', e);
+      allTransactions = [];
+    }
+
+    // Process daily data in memory (no additional queries)
+    const dailyData: { date: string; income: number; expense: number; profit: number; cumulativeProfit: number }[] = [];
     let totalCumulativeProfit = 0;
     
     for (let i = 29; i >= 0; i--) {
       const date = new Date(now);
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
       const dateLabel = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
       
       const dayStart = new Date(date);
@@ -90,23 +113,11 @@ export async function GET(request: NextRequest) {
       const dayEnd = new Date(date);
       dayEnd.setHours(23, 59, 59, 999);
 
-      let dayTransactions: any[] = [];
-      try {
-        // Only get transactions from ACTIVE (non-completed) projects
-        dayTransactions = await db.transaction.findMany({
-          where: {
-            date: {
-              gte: dayStart,
-              lte: dayEnd,
-            },
-            project: {
-              status: { not: 'Completed' }
-            }
-          },
-        });
-      } catch (e) {
-        dayTransactions = [];
-      }
+      // Filter transactions in memory
+      const dayTransactions = allTransactions.filter(t => {
+        const tDate = new Date(t.date);
+        return tDate >= dayStart && tDate <= dayEnd && t.project?.status !== 'Completed';
+      });
 
       const income = dayTransactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
       const expense = dayTransactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
@@ -122,7 +133,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Project status distribution (for all projects)
+    // Project status distribution
     const statusCounts = allProjects.reduce((acc, p) => {
       acc[p.status] = (acc[p.status] || 0) + 1;
       return acc;
@@ -133,32 +144,68 @@ export async function GET(request: NextRequest) {
       count,
     }));
 
-    // Recent transactions (from active projects only)
-    let recentTransactions: any[] = [];
-    try {
-      recentTransactions = await db.transaction.findMany({
-        where: {
-          project: {
-            status: { not: 'Completed' }
-          }
-        },
-        take: 10,
-        orderBy: { createdAt: 'desc' },
-        include: { project: true },
-      });
-    } catch (e) {
-      recentTransactions = [];
+    // Recent transactions (from memory)
+    const recentTransactions = allTransactions
+      .filter(t => t.project?.status !== 'Completed')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10);
+
+    // Treemap data
+    const treemapData = projectStats
+      .filter(p => p.expense > 0 || p.income > 0)
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        profit: p.profit,
+        isProfit: p.profit >= 0,
+        value: Math.abs(p.profit),
+        expense: p.expense,
+        income: p.income,
+      }));
+
+    // Project daily data (from memory - no additional queries)
+    const projectDailyData: { projectId: string; projectName: string; date: string; cumulativeProfit: number; dailyProfit: number }[] = [];
+    
+    for (const project of activeProjects) {
+      const projectTransactions = allTransactions.filter(t => t.projectId === project.id);
+      if (projectTransactions.length === 0) continue;
+      
+      let cumulativeProfit = 0;
+      
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateLabel = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const dayTransactions = projectTransactions.filter(t => {
+          const tDate = new Date(t.date);
+          return tDate >= dayStart && tDate <= dayEnd;
+        });
+
+        const income = dayTransactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
+        const expense = dayTransactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
+        const dailyProfit = income - expense;
+        cumulativeProfit += dailyProfit;
+
+        projectDailyData.push({
+          projectId: project.id,
+          projectName: project.name,
+          date: dateLabel,
+          cumulativeProfit,
+          dailyProfit,
+        });
+      }
     }
 
-    // Activity logs (from active projects only)
+    // Activity logs (separate query but limited)
     let activityLogs: any[] = [];
     try {
       activityLogs = await db.activityLog.findMany({
-        where: {
-          project: {
-            status: { not: 'Completed' }
-          }
-        },
         take: 20,
         orderBy: { createdAt: 'desc' },
         include: { 
@@ -176,71 +223,7 @@ export async function GET(request: NextRequest) {
       activityLogs = [];
     }
 
-    // Treemap data (active projects only)
-    const treemapData = projectStats
-      .filter(p => p.expense > 0 || p.income > 0)
-      .map(p => ({
-        id: p.id,
-        name: p.name,
-        profit: p.profit,
-        isProfit: p.profit >= 0,
-        value: Math.abs(p.profit),
-        expense: p.expense,
-        income: p.income,
-      }));
-
-    // Project daily data - cumulative profit per project (active only)
-    const projectDailyData: { projectId: string; projectName: string; date: string; cumulativeProfit: number; dailyProfit: number }[] = [];
-    
-    const projectsWithTransactions = activeProjects.filter(p => 
-      p.transactions && p.transactions.length > 0
-    );
-    
-    for (const project of projectsWithTransactions) {
-      let cumulativeProfit = 0;
-      
-      for (let i = 29; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
-        const dateLabel = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        
-        const dayStart = new Date(date);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(date);
-        dayEnd.setHours(23, 59, 59, 999);
-
-        let dayTransactions: any[] = [];
-        try {
-          dayTransactions = await db.transaction.findMany({
-            where: {
-              projectId: project.id,
-              date: {
-                gte: dayStart,
-                lte: dayEnd,
-              },
-            },
-          });
-        } catch (e) {
-          dayTransactions = [];
-        }
-
-        const income = dayTransactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
-        const expense = dayTransactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
-        const dailyProfit = income - expense;
-        cumulativeProfit += dailyProfit;
-
-        projectDailyData.push({
-          projectId: project.id,
-          projectName: project.name,
-          date: dateLabel,
-          cumulativeProfit,
-          dailyProfit,
-        });
-      }
-    }
-
     console.log('Dashboard API - Returning projectStats:', projectStats.length, 'projects');
-    console.log('Dashboard API - projectStats data:', JSON.stringify(projectStats.map(p => ({ id: p.id, name: p.name, status: p.status, profit: p.profit }))));
 
     return NextResponse.json({
       stats: {

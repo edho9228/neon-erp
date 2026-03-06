@@ -2,14 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
-// GET company data
+// GET company data - Allow public access for visitor mode
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    // Allow access without authentication for visitor mode
     const company = await db.company.findFirst();
 
     if (!company) {
